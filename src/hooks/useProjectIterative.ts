@@ -14,7 +14,7 @@ interface UseProjectIterativeProps {
     context: string,
     history: ConversationHistoryRow[],
     bpOrResult: any,
-    mode: 'gemini' | 'mock',
+    mode: 'gemini' | 'mock' | 'custom_openai',
     activeTab: string,
     recipeId?: string,
     sparkTitle?: string,
@@ -66,7 +66,7 @@ export function useProjectIterative({
   }, []);
 
   const analyzeProject = useCallback(async (
-    generationMode: 'mock' | 'gemini',
+    generationMode: 'mock' | 'gemini' | 'custom_openai',
     settings: any,
     refinementProfile: string,
     projectPack?: ProjectContextPack
@@ -101,7 +101,8 @@ export function useProjectIterative({
             maxOutputTokens: settings?.maxOutputTokens,
             strictMode: settings?.strictMode,
             browserApiKey: settings?.browserApiKey?.trim() || undefined,
-            debugMode: settings?.debugMode
+            debugMode: settings?.debugMode,
+            customOpenAI: settings?.customOpenAI
           }
         })
       });

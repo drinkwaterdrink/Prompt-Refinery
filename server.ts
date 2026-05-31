@@ -210,6 +210,106 @@ function compileProjectPackGuidance(pack: any): string {
   return block;
 }
 
+interface CustomOpenAIRequestParams {
+  systemInstruction: string;
+  userPrompt: string;
+  config: any;
+}
+
+async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<string> {
+  const { systemInstruction, userPrompt, config } = params;
+  if (!config) {
+    throw new Error("Custom OpenAI configuration is missing.");
+  }
+  const baseUrl = (config.baseUrl || "").trim();
+  if (!baseUrl) {
+    throw new Error("Custom OpenAI Base URL is required.");
+  }
+  
+  let endpoint = (config.endpointPath || "/v1/chat/completions").trim();
+  if (!endpoint.startsWith("/")) {
+    endpoint = "/" + endpoint;
+  }
+  
+  const fullUrl = baseUrl.replace(/\/+$/, "") + endpoint;
+  const apiKey = (config.apiKey || "").trim();
+  const model = (config.model || "").trim();
+  const jsonMode = !!config.jsonMode;
+  
+  let customHeaders: Record<string, string> = {};
+  if (config.customHeadersJson && config.customHeadersJson.trim()) {
+    try {
+      customHeaders = JSON.parse(config.customHeadersJson);
+    } catch (e: any) {
+      throw new Error(`Failed to parse custom headers JSON: ${e.message}`);
+    }
+  }
+  
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...customHeaders
+  };
+  
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+  
+  const body: any = {
+    model: model || "gpt-4o",
+    messages: [
+      { role: "system", content: systemInstruction },
+      { role: "user", content: userPrompt }
+    ]
+  };
+  
+  if (jsonMode) {
+    body.response_format = { type: "json_object" };
+  }
+  
+  try {
+    const response = await fetch(fullUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(`HTTP error status ${response.status}: ${errorText || response.statusText}`);
+    }
+    
+    const data: any = await response.json();
+    if (!data) {
+      throw new Error("Received empty response from Custom OpenAI.");
+    }
+    
+    let text = "";
+    if (data.choices && data.choices[0]) {
+      if (data.choices[0].message && typeof data.choices[0].message.content === "string") {
+        text = data.choices[0].message.content;
+      } else if (typeof data.choices[0].text === "string") {
+        text = data.choices[0].text;
+      }
+    } else if (typeof data.output_text === "string") {
+      text = data.output_text;
+    } else if (typeof data.text === "string") {
+      text = data.text;
+    } else {
+      throw new Error("Could not extract generation content from custom OpenAI response structure.");
+    }
+    
+    return text;
+  } catch (err: any) {
+    let msg = err.message || String(err);
+    if (apiKey) {
+      const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const apiKeyRegex = new RegExp(escapeRegExp(apiKey), "g");
+      msg = msg.replace(apiKeyRegex, "[REDACTED]");
+    }
+    throw new Error(msg);
+  }
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json());
@@ -284,6 +384,32 @@ async function startServer() {
     res.json({ status: "ok", mode: process.env.GEMINI_API_KEY ? "gemini" : "mock-only" });
   });
 
+  // Test connection for Custom OpenAI endpoint
+  app.post("/api/test-connection", async (req, res) => {
+    const { config } = req.body;
+    if (!config) {
+      return res.status(400).json({ ok: false, error: "Configuration is missing." });
+    }
+    
+    const startTime = Date.now();
+    try {
+      const responseText = await callCustomOpenAI({
+        systemInstruction: "You are a connectivity test agent. Respond only with the word 'OK'.",
+        userPrompt: "Are you online?",
+        config
+      });
+      const latencyMs = Date.now() - startTime;
+      return res.json({ ok: true, latencyMs, text: responseText.trim() });
+    } catch (err: any) {
+      console.error("Test connection failed:", err);
+      let errMsg = err.message || String(err);
+      if (config.apiKey && errMsg.includes(config.apiKey)) {
+        errMsg = errMsg.split(config.apiKey).join("[REDACTED]");
+      }
+      return res.json({ ok: false, error: recursiveSanitize(errMsg) });
+    }
+  });
+
   // Creative Spark Catalyst endpoint
   app.post("/api/sparks", async (req, res) => {
     const { count, novelty, category, mood, mode, settings, refinementProfile, projectPack } = req.body;
@@ -297,6 +423,67 @@ async function startServer() {
         return res.json({ ok: true, ideas });
       } catch (mockErr: any) {
         return res.status(500).json({ ok: false, error: "Failed to generate local mock spark ideas." });
+      }
+    }
+
+    // 1b. Custom OpenAI Mode routing
+    if (mode === "custom_openai") {
+      try {
+        const customConfig = settings?.customOpenAI;
+        if (!customConfig) {
+          throw new Error("Custom OpenAI configuration is missing from settings.");
+        }
+        
+        let userPromptContent = `Generate exactly ${sparkCount} buildable software/feature ideas for vibe coding.
+Novelty Tier requested: "${sparkNovelty}".
+`;
+        if (category) userPromptContent += `Target Category/Domain: "${category}".\n`;
+        if (mood) userPromptContent += `Target Mood/Aesthetic: "${mood}".\n`;
+
+        const recipeProfile = getProfileById(refinementProfile || "balanced");
+        const packGuidance = compileProjectPackGuidance(projectPack);
+        const sparksSystemInstruction = `You are a legendary startup incubator general partner and technology foresight researcher. Your task is to generate fresh app or feature ideas for vibe coding.
+Avoid generic todo apps or obvious concepts. Create high-quality, fully buildable concepts.
+For the requested novelty level ("practical", "unusual", "black-swan"), conform to these strict architectural criteria:
+- Practical: Focus on high-utility personal utilities, local grow room tracking, offline-first personal tracking tools, or developer utilities.
+- Unusual: Focus on niche tools, retro-inspired mechanics, world-building lore books, roleplay relationship nodes, or Web Audio oscillators.
+- Black-Swan: Fuse 2-3 unrelated technical pillars, identify a catalyst problem, add an unconventional constraint (e.g. deliberate friction, zero-UI, hyper-local/analog, ephemeral, ambient, voice-first), and produce a buildable but paradigm-shifting MVP loop. Ensure catalystProblem, corePillars, and whyNow are fully populated.
+
+### ACTIVE GENERATION STYLE / PROFILE DIRECTION (CRITICAL):
+${recipeProfile.instructionBlock}
+Ensure the generated sparks, prompts, contexts, and tags are heavily inspired and customized to match this profile's mindset.${packGuidance}
+
+You must reason privately. Output valid JSON only, matching the requested schema. Generate NO other text.`;
+
+        const textOutput = await callCustomOpenAI({
+          systemInstruction: sparksSystemInstruction,
+          userPrompt: userPromptContent,
+          config: customConfig
+        });
+
+        if (!textOutput.trim()) {
+          throw new Error("Received empty response from Custom OpenAI.");
+        }
+
+        const { parsedJson, parseError } = extractJsonBlueprint(textOutput);
+        if (parseError) {
+          throw new Error(`Failed to parse JSON response: ${parseError}`);
+        }
+
+        if (parsedJson && Array.isArray(parsedJson.ideas)) {
+          return res.json({ ok: true, ideas: parsedJson.ideas });
+        }
+
+        throw new Error("JSON structure did not contain expected sparks list.");
+      } catch (customError: any) {
+        console.error("Custom OpenAI Sparks Generation failed:", customError);
+        const fallbackIdeas = generateLocalSparks(sparkCount, sparkNovelty);
+        return res.json({
+          ok: false,
+          error: recursiveSanitize(customError.message),
+          ideas: fallbackIdeas,
+          fallback: true
+        });
       }
     }
 
@@ -496,6 +683,85 @@ You must reason privately. Output valid JSON only, matching the requested schema
           return res.json(mockResponse);
         } catch (mockErr: any) {
           return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock review plan." });
+        }
+      }
+
+      // 1b. Custom OpenAI Mode Router
+      if (mode === "custom_openai") {
+        try {
+          const customConfig = settings?.customOpenAI;
+          if (!customConfig) {
+            throw new Error("Custom OpenAI configuration is missing from settings.");
+          }
+
+          let combinedContextText = uploadedContextText || "";
+          let extractedFilesList: string[] = [];
+
+          if (repoUrl && repoUrl.trim()) {
+            try {
+              const gitExtraction = await extractGitHubContext(repoUrl);
+              if (gitExtraction.text) {
+                combinedContextText += gitExtraction.text;
+              }
+              extractedFilesList = gitExtraction.files;
+            } catch (err) {
+              console.error("Lightweight GitHub context extraction failed silently:", err);
+            }
+          }
+
+          let userPrompt = `Perform a Code Review & Optimization Plan review for the following project:\n\n`;
+          userPrompt += `### PROJECT NAME: "${projectName || "Untitled Project"}"\n`;
+          if (repoUrl) userPrompt += `### GITHUB REPOSITORY: ${repoUrl}\n`;
+          userPrompt += `### CURRENT GOAL / TARGET DIRECTION: "${direction || "General optimization and bug risk audit"}"\n\n`;
+          userPrompt += `### PROJECT CONTEXT & ARCHITECTURE NOTES:\n${projectContext || "None provided"}\n\n`;
+          if (combinedContextText && combinedContextText.trim()) {
+            userPrompt += `### EXTRACTED FILES & REFERENCE CODE:\n${combinedContextText}\n\n`;
+          }
+          userPrompt += `Separate facts from assumptions. Highlight strengths and risks/gaps. Propose 3 to 5 highly specific Suggested Improvements matching the requested JSON format.`;
+
+          const recipeProfile = getProfileById(refinementProfile || "balanced");
+          const packGuidance = compileProjectPackGuidance(projectPack);
+          const systemInstruction = `You are a Principal Product Engineer and Code Review Specialist.
+Your task is to analyze the provided project metadata (name, code context, goals, and direction) using the Code Review & Optimization Plan framework.
+Identify the application type, summarize the project, and outline concrete strengths, key assumptions, and risks/gaps.
+Recommend 3 to 5 atomic, highly focused, and implementable improvements.
+Conform to these rules:
+1. Separate known facts from assumptions.
+2. Recommend small, atomic milestones rather than broad code overhauls.
+3. For each improvement, provide a copy-paste-ready "phase_prompt" that directs a secondary coding agent (like Antigravity) to implement that specific step with precise instructions and target file scopes.
+4. Reason privately and step-by-step. Do not output any thinking or brain-storming tags (like <thinking>, <analysis>, or hidden CoT tags).
+5. Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.
+
+### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):
+${recipeProfile.instructionBlock}
+Ensure the strengths, risks, suggestions, phase prompts, and next phase plans generated align closely with this style's priorities.${packGuidance}`;
+
+          const textOutput = await callCustomOpenAI({
+            systemInstruction,
+            userPrompt,
+            config: customConfig
+          });
+
+          if (!textOutput.trim()) {
+            throw new Error("Received an empty response from Custom OpenAI during code review.");
+          }
+
+          const { parsedJson, parseError } = extractJsonBlueprint(textOutput);
+          if (parseError || !parsedJson) {
+            throw new Error(parseError || "Failed to parse model output as JSON.");
+          }
+
+          if (Array.isArray(parsedJson.known_context_used)) {
+            parsedJson.known_context_used = Array.from(new Set([...parsedJson.known_context_used, ...extractedFilesList]));
+          }
+
+          return res.json(parsedJson);
+        } catch (customError: any) {
+          console.error("Custom OpenAI Code Review failed:", customError);
+          return res.status(500).json({
+            ok: false,
+            error: recursiveSanitize(customError.message)
+          });
         }
       }
 
@@ -700,6 +966,71 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
         }
       }
 
+      // 1b. Custom OpenAI Mode Router
+      if (mode === "custom_openai") {
+        try {
+          const customConfig = settings?.customOpenAI;
+          if (!customConfig) {
+            throw new Error("Custom OpenAI configuration is missing from settings.");
+          }
+
+          let userPrompt = `Perform a systematic Design Audit & Accessibility review for the following project:\n\n`;
+          userPrompt += `### PROJECT NAME: "${projectName || "Untitled UI Project"}"\n`;
+          userPrompt += `### TARGET DEVICE: "${targetDevice || "both"}"\n`;
+          if (stylePreference) userPrompt += `### VISUAL STYLE PREFERENCE: "${stylePreference}"\n`;
+          userPrompt += `### UI ARCHITECTURE DESCRIPTION:\n${uiDescription || "None provided"}\n\n`;
+          if (currentIssues) userPrompt += `### CURRENT ISSUES & BOTTLENECKS:\n${currentIssues}\n\n`;
+          if (designNotes) userPrompt += `### PASTED CSS & DESIGN SPECIFICATION NOTES:\n${designNotes}\n\n`;
+          if (projectContext) userPrompt += `### EXTRA REFERENCE PROJECT CONTEXT:\n${projectContext}\n\n`;
+          userPrompt += `Evaluate against simplicity, cohesive tokens, WCAG AA, responsive strategies, motion, and interaction feedback states. Return the requested JSON schema.`;
+
+          const recipeProfile = getProfileById(refinementProfile || "balanced");
+          const packGuidance = compileProjectPackGuidance(projectPack);
+          const systemInstruction = `You are a Lead Design System Architect and UX Specialist.
+Your task is to evaluate the user's UI layout description, current issues, target devices, visual preferences, and design context against these strict Design Principles:
+- Simplicity through reduction
+- Material honesty & Obsessive detail
+- Coherent tokenized design language (HSL colors, type, 8pt spacing systems)
+- Context-driven layout & Mobile-first structures
+- Accessibility by default (WCAG AA contrast, keyboard paths, :focus-visible states, reduced-motion queries)
+- Performance feel & Rapid feedback loops
+- Cohesive interactive component states
+
+Reason privately and step-by-step. Do not output any thinking or brainstorming tags (like <thinking>, <analysis>, or hidden CoT tags).
+Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.
+
+### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):
+${recipeProfile.instructionBlock}
+Ensure the scores, strengths, issues, wins, and implementation prompts generated align closely with this style's priorities.${packGuidance}`;
+
+          const textOutput = await callCustomOpenAI({
+            systemInstruction,
+            userPrompt,
+            config: customConfig
+          });
+
+          if (!textOutput.trim()) {
+            throw new Error("Received an empty response from Custom OpenAI during design review.");
+          }
+
+          const { parsedJson, parseError } = extractJsonBlueprint(textOutput);
+          if (parseError || !parsedJson) {
+            throw new Error(parseError || "Failed to parse model output as JSON.");
+          }
+
+          parsedJson.targetDevice = targetDevice || "both";
+          parsedJson.stylePreference = stylePreference || "Cohesive HSL Accent";
+
+          return res.json(parsedJson);
+        } catch (customError: any) {
+          console.error("Custom OpenAI Design Audit failed:", customError);
+          return res.status(500).json({
+            ok: false,
+            error: recursiveSanitize(customError.message)
+          });
+        }
+      }
+
       // 2. Real Gemini Mode Router
       const { ai: activeClient, error: clientSetupError } = getGeminiClient(settings);
       if (clientSetupError || !activeClient) {
@@ -845,6 +1176,79 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           }
         } catch (mockErr: any) {
           return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock recipe outcome." });
+        }
+      }
+
+      // 1b. Custom OpenAI Mode logic
+      if (mode === "custom_openai") {
+        try {
+          const customConfig = settings?.customOpenAI;
+          if (!customConfig) {
+            throw new Error("Custom OpenAI configuration is missing from settings.");
+          }
+
+          const userPromptContent = recipe.userPayloadBuilder(rawPrompt, projectContext, conversationHistory);
+          const recipeProfile = getProfileById(refinementProfile || "balanced");
+          const packGuidance = compileProjectPackGuidance(projectPack);
+          const systemInstruction = `${recipe.systemInstruction}\n\n### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):\n${recipeProfile.instructionBlock}\nEnsure all specifications, lists, prompts, and notes generated align closely with this style.${packGuidance}`;
+
+          const textOutput = await callCustomOpenAI({
+            systemInstruction,
+            userPrompt: userPromptContent,
+            config: customConfig
+          });
+
+          if (!textOutput.trim()) {
+            throw new Error("Received an empty response from the Custom OpenAI model.");
+          }
+
+          // For non-blueprint modes, bypass JSON parsing and validation
+          if (activeRecipeId !== "blueprint") {
+            return res.json({
+              ok: true,
+              recipeId: activeRecipeId,
+              outputKind: recipe.outputKind,
+              title: `${recipe.label} Output`,
+              content: textOutput,
+              structuredData: {}
+            });
+          }
+
+          // Parse JSON output safely using the robust blueprint extraction helper (exclusive to blueprint mode)
+          const { parsedJson, parseError } = extractJsonBlueprint(textOutput);
+
+          if (parseError || !parsedJson) {
+            return res.status(500).json({
+              ok: false,
+              error: parseError || "Failed to parse model output as JSON.",
+              rawOutput: textOutput
+            });
+          }
+
+          // Validate the structure against exact schema (exclusive to blueprint mode)
+          const schemaIssues = validateBlueprint(parsedJson);
+          if (schemaIssues) {
+            return res.status(422).json({
+              ok: false,
+              error: `Schema Validation Mismatch: ${schemaIssues.join(" | ")}`,
+              rawOutput: textOutput
+            });
+          }
+
+          // Successfully parsed and validated!
+          return res.json({
+            ok: true,
+            blueprint: parsedJson
+          });
+
+        } catch (customError: any) {
+          console.error("Custom OpenAI invocation failed:", customError);
+          const isDebug = settings?.debugMode === true;
+          return res.status(500).json({
+            ok: false,
+            error: recursiveSanitize(customError.message),
+            rawOutput: isDebug ? recursiveSanitize(customError.stack || String(customError)) : undefined
+          });
         }
       }
 
@@ -1029,6 +1433,109 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           return res.json({ ok: true, blueprint });
         } catch (mockErr: any) {
           return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock refined blueprint." });
+        }
+      }
+
+      // 1b. Custom OpenAI Mode logic
+      if (mode === "custom_openai") {
+        try {
+          const customConfig = settings?.customOpenAI;
+          if (!customConfig) {
+            throw new Error("Custom OpenAI configuration is missing from settings.");
+          }
+
+          let userPromptContent = `You are revising an existing prompt blueprint based on user reviews of assumptions.\n\n`;
+          userPromptContent += `### ORIGINAL RAW PROMPT:\n"${originalRawPrompt || ""}"\n\n`;
+
+          if (originalProjectContext && originalProjectContext.trim()) {
+            userPromptContent += `### EXTRA ORIGINAL PROJECT CONTEXT:\n"${originalProjectContext}"\n\n`;
+          }
+
+          if (originalConversationHistory && Array.isArray(originalConversationHistory) && originalConversationHistory.length > 0) {
+            userPromptContent += `### CONVERSATION HISTORY:\n`;
+            originalConversationHistory.forEach((message: any) => {
+              const role = message.role === "assistant" ? "Assistant" : "User";
+              userPromptContent += `[${role}]: ${message.content}\n`;
+            });
+            userPromptContent += `\n`;
+          }
+
+          userPromptContent += `### CURRENT BLUEPRINT:\n${JSON.stringify(currentBlueprint, null, 2)}\n\n`;
+
+          userPromptContent += `### REVISION INSTRUCTIONS:\n`;
+          userPromptContent += `Revise the existing blueprint instead of starting from scratch. Preserve valid unchanged sections. Remove rejected assumptions. Integrate corrected assumptions. Update requirements, architecture, UX, edge cases, developer notes, and final_prompt as needed. Return the same strict JSON blueprint schema only.\n\n`;
+
+          userPromptContent += `### KEPT ASSUMPTIONS:\n`;
+          if (keptAssumptions && Array.isArray(keptAssumptions) && keptAssumptions.length > 0) {
+            keptAssumptions.forEach((ass: any) => {
+              userPromptContent += `- [Kept] ID: ${ass.id} - ${ass.text}\n`;
+            });
+          } else {
+            userPromptContent += `(None specified)\n`;
+          }
+          userPromptContent += `\n`;
+
+          userPromptContent += `### REJECTED & CORRECTED ASSUMPTIONS:\n`;
+          if (rejectedAssumptions && Array.isArray(rejectedAssumptions) && rejectedAssumptions.length > 0) {
+            rejectedAssumptions.forEach((ass: any) => {
+              userPromptContent += `- [Rejected] ID: ${ass.id} - "${ass.text}"\n`;
+              if (ass.correction && ass.correction.trim()) {
+                userPromptContent += `  Correction: "${ass.correction}"\n`;
+              }
+            });
+          } else {
+            userPromptContent += `(None specified)\n`;
+          }
+          userPromptContent += `\n`;
+
+          userPromptContent += `Structure your output exactly matching the described schema version '1.0'. Generate NO other text.`;
+
+          const recipeProfile = getProfileById(refinementProfile || "balanced");
+          const packGuidance = compileProjectPackGuidance(projectPack);
+          const systemInstruction = `${ENHANCER_SYSTEM_PROMPT}\n\n### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):\n${recipeProfile.instructionBlock}\nEnsure all revised specifications, lists, prompts, and notes generated align closely with this style.${packGuidance}`;
+
+          const textOutput = await callCustomOpenAI({
+            systemInstruction,
+            userPrompt: userPromptContent,
+            config: customConfig
+          });
+
+          if (!textOutput.trim()) {
+            throw new Error("Received an empty response from Custom OpenAI during refinement.");
+          }
+
+          const { parsedJson, parseError } = extractJsonBlueprint(textOutput);
+
+          if (parseError || !parsedJson) {
+            return res.status(500).json({
+              ok: false,
+              error: parseError || "Failed to parse model output as JSON.",
+              rawOutput: textOutput
+            });
+          }
+
+          const schemaIssues = validateBlueprint(parsedJson);
+          if (schemaIssues) {
+            return res.status(422).json({
+              ok: false,
+              error: `Schema Validation Mismatch after refinement: ${schemaIssues.join(" | ")}`,
+              rawOutput: textOutput
+            });
+          }
+
+          return res.json({
+            ok: true,
+            blueprint: parsedJson
+          });
+
+        } catch (customError: any) {
+          console.error("Custom OpenAI refinement failed:", customError);
+          const isDebug = settings?.debugMode === true;
+          return res.status(500).json({
+            ok: false,
+            error: recursiveSanitize(customError.message),
+            rawOutput: isDebug ? recursiveSanitize(customError.stack || String(customError)) : undefined
+          });
         }
       }
 

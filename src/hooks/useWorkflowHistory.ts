@@ -32,7 +32,7 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     context: string,
     history: ConversationHistoryRow[],
     bpOrResult: any,
-    mode: 'gemini' | 'mock',
+    mode: 'gemini' | 'mock' | 'custom_openai',
     activeTab: string,
     recipeId?: string,
     sparkTitle?: string,

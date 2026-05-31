@@ -7,8 +7,11 @@ import { useState, useCallback } from 'react';
 import { RefineryPipeline, PipelineStageResult, ConversationHistoryRow, ProjectContextPack } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
 
+import type { CustomOpenAIConfig } from '../lib/providers/types';
+
 interface UsePipelineWorkflowProps {
-  generationMode: 'mock' | 'gemini';
+  generationMode: 'mock' | 'gemini' | 'custom_openai';
+  customOpenAI?: CustomOpenAIConfig;
   model: string;
   temperature: number;
   maxOutputTokens: number;
@@ -21,7 +24,7 @@ interface UsePipelineWorkflowProps {
     context: string,
     history: ConversationHistoryRow[],
     bpOrResult: any,
-    mode: 'gemini' | 'mock',
+    mode: 'gemini' | 'mock' | 'custom_openai',
     activeTab: string,
     recipeId?: string,
     sparkTitle?: string,
@@ -46,6 +49,7 @@ const STAGE_RECIPES: Record<StageKey, { recipeId: string; label: string }> = {
 
 export function usePipelineWorkflow({
   generationMode,
+  customOpenAI,
   model,
   temperature,
   maxOutputTokens,
@@ -222,7 +226,8 @@ export function usePipelineWorkflow({
             maxOutputTokens,
             strictMode,
             browserApiKey: browserApiKey?.trim() || undefined,
-            debugMode
+            debugMode,
+            customOpenAI
           }
         })
       });
@@ -286,7 +291,7 @@ export function usePipelineWorkflow({
       setStageErrors(prev => ({ ...prev, [stageKey]: errorMsg }));
       showToast(`Network error generating ${label}.`);
     }
-  }, [pipeline, generationMode, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory, startPipeline]);
+  }, [pipeline, generationMode, customOpenAI, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory, startPipeline]);
 
   return {
     pipeline,

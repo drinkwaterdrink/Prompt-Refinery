@@ -8,9 +8,11 @@ import { PromptBlueprint, ConversationHistoryRow, validateBlueprint, PromptRecip
 import { MOCK_MALFORMED_BLUEPRINT } from '../mockData';
 import { recursiveSanitize } from '../lib/sanitize';
 import { getRecipeById } from '../lib/promptRecipes/registry';
+import type { CustomOpenAIConfig } from '../lib/providers/types';
 
 interface UseBlueprintGenerationProps {
-  generationMode: 'mock' | 'gemini';
+  generationMode: 'mock' | 'gemini' | 'custom_openai';
+  customOpenAI?: CustomOpenAIConfig;
   forceValidationError: boolean;
   model: string;
   temperature: number;
@@ -24,7 +26,7 @@ interface UseBlueprintGenerationProps {
     context: string,
     history: ConversationHistoryRow[],
     bpOrResult: any,
-    mode: 'gemini' | 'mock',
+    mode: 'gemini' | 'mock' | 'custom_openai',
     activeTab: string,
     recipeId?: string,
     sparkTitle?: string,
@@ -40,6 +42,7 @@ interface UseBlueprintGenerationProps {
 
 export function useBlueprintGeneration({
   generationMode,
+  customOpenAI,
   forceValidationError,
   model,
   temperature,
@@ -185,7 +188,7 @@ export function useBlueprintGeneration({
             rawPrompt,
             projectContext,
             conversationHistory: historyRows,
-            mode: forceValidationError ? 'mock' : 'gemini',
+            mode: forceValidationError ? 'mock' : generationMode,
             recipeId: selectedRecipeId,
             refinementProfile,
             projectPack,
@@ -195,7 +198,8 @@ export function useBlueprintGeneration({
               maxOutputTokens,
               strictMode,
               browserApiKey: browserApiKey?.trim() || undefined,
-              debugMode
+              debugMode,
+              customOpenAI
             }
           })
         });
@@ -248,7 +252,7 @@ export function useBlueprintGeneration({
         setIsGenerating(false);
       }
     }
-  }, [generationMode, forceValidationError, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory, selectedRecipeId]);
+  }, [generationMode, customOpenAI, forceValidationError, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory, selectedRecipeId]);
 
   // Phase 5: Refine Blueprint via assumption review loop
   const refineBlueprint = useCallback(async (
@@ -310,7 +314,8 @@ export function useBlueprintGeneration({
           maxOutputTokens,
           strictMode,
           browserApiKey: browserApiKey?.trim() || undefined,
-          debugMode
+          debugMode,
+          customOpenAI
         }
       };
 
@@ -361,7 +366,7 @@ export function useBlueprintGeneration({
     } finally {
       setIsRefining(false);
     }
-  }, [blueprint, rejectionStates, originalRawPrompt, originalProjectContext, originalConversationHistory, generationMode, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory]);
+  }, [blueprint, rejectionStates, originalRawPrompt, originalProjectContext, originalConversationHistory, generationMode, customOpenAI, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory]);
 
   return {
     isGenerating,

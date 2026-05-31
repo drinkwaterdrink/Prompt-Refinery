@@ -2,6 +2,20 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.09] - 2026-05-31
+
+### Added Provider Adapter System & Custom OpenAI-Compatible Endpoint (Phase 16)
+- Refactored the provider generation layer to support a three-way execution framework: 🎭 Mock Mode, ✨ Gemini API, and 🔌 Custom API (OpenAI-compatible endpoints).
+- Implemented `callCustomOpenAI` helper function in `server.ts` with robust authorization header integration, model identifier passing, custom JSON request body formats, and secure exception handling.
+- Implemented dynamic CORS-safe forwarding by routing custom OpenAI completions through the development server, supporting integrations with NanoGPT, OpenRouter, local proxies (LM Studio / Ollama), or any custom LLM host.
+- Programmed a `/api/test-connection` diagnostic POST endpoint returning latency metrics and sample responses without persisting secrets.
+- Developed an interactive diagnostic connection test form directly in the SettingsModal, providing instant visual feedback and success/error metrics.
+- Upgraded the execution selector inside `SettingsModal` to a premium three-way grid layout with contextual instructions.
+- Implemented real-time JSON validation for Custom Headers inside the Settings panel with inline error notifications.
+- Secured credentials by keeping Custom OpenAI API Keys transient in client-side state, never saving them to LocalStorage or sessionStorage, and keeping them completely omitted from exports, packets, and history logs.
+- Upgraded `useBlueprintGeneration`, `usePipelineWorkflow`, `useProjectIterative`, and `useDesignAudit` hooks to propagate the custom OpenAI configuration within system payload settings.
+- Verified compilation and packaging, achieving successful Vite production builds and zero linter warnings.
+
 ## [0.08] - 2026-05-31
 
 ### Added Project Context Packs (Phase 15)

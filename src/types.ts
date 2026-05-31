@@ -413,7 +413,7 @@ export interface WorkflowHistoryItem {
   title: string;
   timestamp: string;
   summary: string;
-  provider: 'gemini' | 'mock';
+  provider: 'gemini' | 'mock' | 'custom_openai';
   rawPrompt: string;
   projectContext: string;
   conversationHistory: ConversationHistoryRow[];

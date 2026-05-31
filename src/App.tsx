@@ -96,7 +96,31 @@ export default function App() {
   useEffect(() => { sessionStorage.setItem('prompt_refinery_byok', browserApiKey); }, [browserApiKey]);
 
   // Provider engines state
-  const [generationMode, setGenerationMode] = useState<'mock' | 'gemini'>('mock');
+  const [generationMode, setGenerationMode] = useState<'mock' | 'gemini' | 'custom_openai'>('mock');
+
+  // Custom OpenAI compatible endpoint state
+  const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_base_url') || 'https://api.openrouter.ai');
+  const [customEndpointPath, setCustomEndpointPath] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_endpoint') || '/v1/chat/completions');
+  const [customApiKey, setCustomApiKey] = useState<string>('');
+  const [customModel, setCustomModel] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_model') || 'openai/gpt-4o');
+  const [customHeadersJson, setCustomHeadersJson] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_headers') || '{}');
+  const [customJsonMode, setCustomJsonMode] = useState<boolean>(() => sessionStorage.getItem('prompt_refinery_custom_json_mode') !== 'false');
+
+  // Sync custom OpenAI settings to sessionStorage (excluding apiKey)
+  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_base_url', customBaseUrl); }, [customBaseUrl]);
+  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_endpoint', customEndpointPath); }, [customEndpointPath]);
+  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_model', customModel); }, [customModel]);
+  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_headers', customHeadersJson); }, [customHeadersJson]);
+  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_json_mode', customJsonMode.toString()); }, [customJsonMode]);
+
+  const customOpenAI = {
+    baseUrl: customBaseUrl,
+    endpointPath: customEndpointPath,
+    apiKey: customApiKey,
+    model: customModel,
+    customHeadersJson,
+    jsonMode: customJsonMode
+  };
 
   // UI Tabs inside Blueprint Explorer
   const [activeTab, setActiveTab] = useState<'overview' | 'requirements' | 'architecture' | 'data-ux' | 'reliability' | 'prompt' | 'json'>('overview');
@@ -128,7 +152,7 @@ export default function App() {
     context: string,
     history: ConversationHistoryRow[],
     bpOrResult: any,
-    mode: 'gemini' | 'mock',
+    mode: 'gemini' | 'mock' | 'custom_openai',
     tab: string,
     recipeId?: string
   ) => {
@@ -177,6 +201,7 @@ export default function App() {
     refineBlueprint
   } = useBlueprintGeneration({
     generationMode,
+    customOpenAI,
     forceValidationError,
     model,
     temperature,
@@ -202,6 +227,7 @@ export default function App() {
     generateStage
   } = usePipelineWorkflow({
     generationMode,
+    customOpenAI,
     model,
     temperature,
     maxOutputTokens,
@@ -331,7 +357,8 @@ export default function App() {
       maxOutputTokens,
       strictMode,
       browserApiKey,
-      debugMode
+      debugMode,
+      customOpenAI
     }, refinementProfile, activePack || undefined);
   };
 
@@ -343,7 +370,8 @@ export default function App() {
       maxOutputTokens,
       strictMode,
       browserApiKey,
-      debugMode
+      debugMode,
+      customOpenAI
     }, refinementProfile, activePack || undefined);
   };
 
@@ -413,7 +441,8 @@ export default function App() {
             maxOutputTokens,
             strictMode,
             browserApiKey: browserApiKey?.trim() || undefined,
-            debugMode
+            debugMode,
+            customOpenAI
           }
         })
       });
@@ -1117,6 +1146,18 @@ export default function App() {
         showApiKey={showApiKey}
         setShowApiKey={setShowApiKey}
         showToast={showToast}
+        customBaseUrl={customBaseUrl}
+        setCustomBaseUrl={setCustomBaseUrl}
+        customEndpointPath={customEndpointPath}
+        setCustomEndpointPath={setCustomEndpointPath}
+        customApiKey={customApiKey}
+        setCustomApiKey={setCustomApiKey}
+        customModel={customModel}
+        setCustomModel={setCustomModel}
+        customHeadersJson={customHeadersJson}
+        setCustomHeadersJson={setCustomHeadersJson}
+        customJsonMode={customJsonMode}
+        setCustomJsonMode={setCustomJsonMode}
       />
 
       {/* Project Context Pack Editor Modal */}
