@@ -4,9 +4,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { PromptBlueprint, ConversationHistoryRow, validateBlueprint } from '../types';
-import { MOCK_MALFORMED_BLUEPRINT, generateBlueprintForPrompt } from '../mockData';
+import { PromptBlueprint, ConversationHistoryRow, validateBlueprint, PromptRecipeId, GenericRecipeResult } from '../types';
+import { MOCK_MALFORMED_BLUEPRINT } from '../mockData';
 import { recursiveSanitize } from '../lib/sanitize';
+import { getRecipeById } from '../lib/promptRecipes/registry';
 
 interface UseBlueprintGenerationProps {
   generationMode: 'mock' | 'gemini';
@@ -22,9 +23,10 @@ interface UseBlueprintGenerationProps {
     prompt: string,
     context: string,
     history: ConversationHistoryRow[],
-    bp: PromptBlueprint,
+    bpOrResult: any,
     mode: 'gemini' | 'mock',
-    activeTab: string
+    activeTab: string,
+    recipeId?: string
   ) => void;
 }
 
@@ -43,6 +45,9 @@ export function useBlueprintGeneration({
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationStep, setGenerationStep] = useState<number>(0);
   const [blueprint, setBlueprint] = useState<PromptBlueprint | null>(null);
+  const [recipeResult, setRecipeResult] = useState<GenericRecipeResult | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<PromptRecipeId>('blueprint');
+  
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null);
   const [geminiError, setGeminiError] = useState<string | null>(null);
   const [rawOutput, setRawOutput] = useState<string | null>(null);
@@ -92,6 +97,7 @@ export function useBlueprintGeneration({
     setIsGenerating(true);
     setGenerationStep(0);
     setBlueprint(null);
+    setRecipeResult(null);
     setValidationErrors(null);
     setGeminiError(null);
     setRawOutput(null);
@@ -99,6 +105,8 @@ export function useBlueprintGeneration({
     setRefinementError(null);
     setRevisionCount(0);
     setLastRefined(null);
+
+    const recipe = getRecipeById(selectedRecipeId);
 
     if (generationMode === 'mock') {
       // Mock mode: locally handled with beautiful timed steps
@@ -108,28 +116,45 @@ export function useBlueprintGeneration({
 
       setTimeout(() => {
         clearInterval(interval);
-        let candidateBlueprint: any;
+        try {
+          const mockOutcome = recipe.mockGenerator(rawPrompt, projectContext);
 
-        if (forceValidationError) {
-          candidateBlueprint = MOCK_MALFORMED_BLUEPRINT;
-        } else {
-          candidateBlueprint = generateBlueprintForPrompt(rawPrompt, projectContext);
-        }
+          if (selectedRecipeId === 'blueprint') {
+            let candidateBlueprint: any;
+            if (forceValidationError) {
+              candidateBlueprint = MOCK_MALFORMED_BLUEPRINT;
+            } else {
+              candidateBlueprint = mockOutcome;
+            }
 
-        const errors = validateBlueprint(candidateBlueprint);
-        if (errors) {
-          setValidationErrors(errors);
-          setBlueprint(null);
-          showToast('Validation failed on generated blueprint structure.');
-        } else {
-          const sanitizedBp = recursiveSanitize(candidateBlueprint);
-          setBlueprint(sanitizedBp);
-          setValidationErrors(null);
-          setOriginalRawPrompt(rawPrompt);
-          setOriginalProjectContext(projectContext);
-          setOriginalConversationHistory(historyRows);
-          showToast('Blueprint generated and verified successfully.');
-          saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'mock', activeTab);
+            const errors = validateBlueprint(candidateBlueprint);
+            if (errors) {
+              setValidationErrors(errors);
+              setBlueprint(null);
+              showToast('Validation failed on generated blueprint structure.');
+            } else {
+              const sanitizedBp = recursiveSanitize(candidateBlueprint);
+              setBlueprint(sanitizedBp);
+              setValidationErrors(null);
+              setOriginalRawPrompt(rawPrompt);
+              setOriginalProjectContext(projectContext);
+              setOriginalConversationHistory(historyRows);
+              showToast('Blueprint generated and verified successfully.');
+              saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'mock', activeTab, 'blueprint');
+            }
+          } else {
+            const sanitizedResult = recursiveSanitize(mockOutcome);
+            setRecipeResult(sanitizedResult);
+            setBlueprint(null);
+            setValidationErrors(null);
+            setOriginalRawPrompt(rawPrompt);
+            setOriginalProjectContext(projectContext);
+            setOriginalConversationHistory(historyRows);
+            showToast(`${recipe.label} generated successfully.`);
+            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedResult, 'mock', activeTab, selectedRecipeId);
+          }
+        } catch (err: any) {
+          showToast('Failed generating mock outcome.');
         }
         setIsGenerating(false);
       }, 1800);
@@ -151,6 +176,7 @@ export function useBlueprintGeneration({
             projectContext,
             conversationHistory: historyRows,
             mode: forceValidationError ? 'mock' : 'gemini',
+            recipeId: selectedRecipeId,
             settings: {
               model,
               temperature,
@@ -166,17 +192,31 @@ export function useBlueprintGeneration({
 
         const result = await response.json();
         if (response.ok && result.ok) {
-          const sanitizedBp = recursiveSanitize(result.blueprint);
-          setBlueprint(sanitizedBp);
-          setValidationErrors(null);
-          setGeminiError(null);
-          setOriginalRawPrompt(rawPrompt);
-          setOriginalProjectContext(projectContext);
-          setOriginalConversationHistory(historyRows);
-          showToast('Blueprint generated and verified via Gemini!');
-          saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'gemini', activeTab);
+          if (selectedRecipeId === 'blueprint') {
+            const sanitizedBp = recursiveSanitize(result.blueprint);
+            setBlueprint(sanitizedBp);
+            setRecipeResult(null);
+            setValidationErrors(null);
+            setGeminiError(null);
+            setOriginalRawPrompt(rawPrompt);
+            setOriginalProjectContext(projectContext);
+            setOriginalConversationHistory(historyRows);
+            showToast('Blueprint generated and verified via Gemini!');
+            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'gemini', activeTab, 'blueprint');
+          } else {
+            const sanitizedResult = recursiveSanitize(result);
+            setRecipeResult(sanitizedResult);
+            setBlueprint(null);
+            setValidationErrors(null);
+            setGeminiError(null);
+            setOriginalRawPrompt(rawPrompt);
+            setOriginalProjectContext(projectContext);
+            setOriginalConversationHistory(historyRows);
+            showToast(`${result.title || recipe.label} generated via Gemini!`);
+            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedResult, 'gemini', activeTab, selectedRecipeId);
+          }
         } else {
-          setGeminiError(result.error || 'Server returned an error generating blueprint.');
+          setGeminiError(result.error || 'Server returned an error generating result.');
           if (result.rawOutput) {
             setRawOutput(recursiveSanitize(result.rawOutput));
           }
@@ -185,7 +225,7 @@ export function useBlueprintGeneration({
             const issues = cleanErr.split(' | ').join('; ').split('; ');
             setValidationErrors(issues);
           }
-          showToast('Failed to refine blueprint.');
+          showToast('Failed to refine prompt.');
         }
       } catch (err: any) {
         if (intervalId) clearInterval(intervalId);
@@ -196,7 +236,7 @@ export function useBlueprintGeneration({
         setIsGenerating(false);
       }
     }
-  }, [generationMode, forceValidationError, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory]);
+  }, [generationMode, forceValidationError, model, temperature, maxOutputTokens, strictMode, browserApiKey, debugMode, showToast, saveToWorkflowHistory, selectedRecipeId]);
 
   // Phase 5: Refine Blueprint via assumption review loop
   const refineBlueprint = useCallback(async (
@@ -270,6 +310,7 @@ export function useBlueprintGeneration({
       if (response.ok && result?.ok) {
         const sanitizedBp = recursiveSanitize(result.blueprint);
         setBlueprint(sanitizedBp);
+        setRecipeResult(null);
         setRevisionCount(prev => prev + 1);
         setLastRefined(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         setRejectionStates({}); // Reset review state since layout assumptions are redrawn
@@ -282,7 +323,8 @@ export function useBlueprintGeneration({
           originalConversationHistory || historyRows,
           sanitizedBp,
           generationMode,
-          activeTab
+          activeTab,
+          'blueprint'
         );
       } else {
         setRefinementError(result?.error || 'Server refused requested refinement payload.');
@@ -302,6 +344,10 @@ export function useBlueprintGeneration({
     generationStep,
     blueprint,
     setBlueprint,
+    recipeResult,
+    setRecipeResult,
+    selectedRecipeId,
+    setSelectedRecipeId,
     validationErrors,
     setValidationErrors,
     geminiError,

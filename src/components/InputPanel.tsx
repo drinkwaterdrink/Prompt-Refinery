@@ -22,6 +22,8 @@ interface InputPanelProps {
   setGenerationMode: (mode: 'mock' | 'gemini') => void;
   isGenerating: boolean;
   debugMode: boolean;
+  selectedRecipeId: string;
+  setSelectedRecipeId: (val: any) => void;
   onClear: () => void;
   onSubmit: (e: React.FormEvent) => void;
   showToast: (msg: string) => void;
@@ -42,6 +44,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({
   setGenerationMode,
   isGenerating,
   debugMode,
+  selectedRecipeId,
+  setSelectedRecipeId,
   onClear,
   onSubmit,
   showToast
@@ -116,6 +120,41 @@ export const InputPanel: React.FC<InputPanelProps> = ({
               Gemini API
             </button>
           </div>
+        </div>
+
+        {/* Recipe Selector */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="recipe-selector" className="text-[10px] font-bold uppercase tracking-wider text-slate-455 flex items-center gap-1 font-mono">
+            Prompt Recipe <span className="text-[#D4AF37]">*</span>
+          </label>
+          <div className="relative">
+            <select
+              id="recipe-selector"
+              value={selectedRecipeId}
+              onChange={(e) => setSelectedRecipeId(e.target.value as any)}
+              className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-semibold rounded-lg p-2.5 pr-8 text-[#D4AF37] cursor-pointer focus:outline-none transition appearance-none font-mono"
+            >
+              <option value="blueprint">📋 Blueprint (Default)</option>
+              <option value="idea_refinement">💡 Idea Refinement</option>
+              <option value="technical_spec">⚙️ Technical Spec</option>
+              <option value="implementation_plan">🎯 Implementation Plan</option>
+              <option value="code_review">🔍 Code Review / Optimization</option>
+              <option value="black_swan">🦢 Black-Swan Ideation</option>
+              <option value="design_audit">🎨 Design Audit</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-[#D4AF37]">
+              <ChevronDown className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500 italic leading-snug">
+            {selectedRecipeId === 'blueprint' && 'Turns a rough app/feature idea into a structured coding-agent prompt blueprint.'}
+            {selectedRecipeId === 'idea_refinement' && 'Turns a rough idea into a cleaner Markdown Project Request.'}
+            {selectedRecipeId === 'technical_spec' && 'Turns a request, rules, and reference context into a detailed technical specification.'}
+            {selectedRecipeId === 'implementation_plan' && 'Turns a technical spec into a sequential implementation plan for a coding agent.'}
+            {selectedRecipeId === 'code_review' && 'Turns project context or repo summaries into an Optimization Plan.'}
+            {selectedRecipeId === 'black_swan' && 'Generate novel, non-obvious, and highly defensible startup or feature MVPs.'}
+            {selectedRecipeId === 'design_audit' && 'Audit your UI/UX plans against systematic design tokens, WCAG AA, and component states.'}
+          </p>
         </div>
 
         {/* 1. Raw Input Prompt */}

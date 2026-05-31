@@ -4,11 +4,17 @@
 
 # Prompt Refinery
 
-**Version:** 0.01  
+**Version:** 0.02  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
 Deploy link: https://ai.studio/apps/578e8b3d-4299-43a9-bb6d-ff0b0471f3cd
 
-## Architecture (Phase 8 Modularization)
+## Features
+- **Prompt Recipe Engine**: Supports multiple specialized generation targets (Blueprint, Idea Refinement, Technical Spec, Implementation Plan, Code Review, Design Audit, Black-Swan Ideation).
+- **Stunning UI Selector**: Premium selector dropdown inside input configuration pane.
+- **Scrollable Markdown Viewports**: Displays plain-text recipe outcomes cleanly in a high-fidelity rendering panel.
+
+## Architecture (Phase 9 Modularization)
+- **`src/lib/promptRecipes/`**: Modular prompt recipe registry containing all specialized instructions, builders, and mock generators.
 - **`src/components/`**: Isolated presentation views for Inputs, Modals, explorer dashboards, and drawer states.
 - **`src/hooks/`**: Standard React hooks encapsulating generation, persistence, and feedback alerts.
 - **`src/lib/`**: Secure helper frameworks for secret redaction, safe clipboard copy, and dual-shape import parsing.

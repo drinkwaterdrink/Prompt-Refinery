@@ -2,6 +2,26 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.02] - 2026-05-31
+
+### Added Prompt Recipe Engine & Frameworks
+- Introduced a modular Prompt Recipe Engine registry allowing the pre-compiler to support specialized, target-specific generation flows.
+- Programmed and integrated six custom, internal codebase prompt modules under `src/lib/promptRecipes/`:
+  - **Idea Refinement**: Generates high-fidelity markdown Project Requests.
+  - **Technical Specification**: Converts requests into multi-layer software spec architectures.
+  - **Implementation Plan**: Structures specifications into sequential, atomic coding steps (<20 files per step) for agentic coders.
+  - **Code Review**: Audits repositories or code notes to construct optimized checklists.
+  - **Design Audit**: Evaluates UI plans against cohesive HSL spacing tokens, WCAG AA contrast compliance, motion restraints, and component state outlines.
+  - **Black-Swan Ideation**: Conceptualizes defensible startup ideas and gamified core loops.
+- Programmed specialized server-side payload compilers and mock outcome data generators for every custom recipe, ensuring complete sandboxed testing capabilities.
+
+### Refactored UI & Routing
+- Added a premium, gold-bordered **Prompt Recipe Selector** inside `InputPanel` featuring description tip boxes for every workflow.
+- Programmed custom, responsive, and scrollable **Markdown/Text rendering components** inside `BlueprintExplorer` to display plain-text recipe outcomes elegantly.
+- Upgraded the Express `/api/refine` endpoint to dynamic routing, dynamically configuring system instructions, payload constructs, and `responseMimeType` settings per recipe.
+- Ensured model reasoning remains strictly private; system prompts instruct models to omit any chain-of-thought (`<thinking>`, `<analysis>`) tags.
+- Fully wired history log preservation so past runs restore the correct UI viewport, input fields, and output selectors matching the run's recipe.
+
 ## [0.01] - 2026-05-31
 
 ### Refactored & Stabilized

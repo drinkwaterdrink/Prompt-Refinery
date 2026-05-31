@@ -12,6 +12,7 @@ import { generateBlueprintForPrompt } from "./src/mockData";
 import { validateBlueprint } from "./src/types";
 import { ENHANCER_SYSTEM_PROMPT, BLUEPRINT_OUTPUT_CONTRACT } from "./src/lib/prompt/enhancerSystemPrompt";
 import { recursiveSanitize } from "./src/lib/sanitize";
+import { getRecipeById, isValidRecipeId } from "./src/lib/promptRecipes/registry";
 
 dotenv.config();
 
@@ -196,19 +197,27 @@ async function startServer() {
   // Main prompt refinement endpoint
   app.post("/api/refine", async (req, res) => {
     try {
-      const { rawPrompt, projectContext, conversationHistory, mode, settings } = req.body;
+      const { rawPrompt, projectContext, conversationHistory, mode, settings, recipeId } = req.body;
 
       if (!rawPrompt || typeof rawPrompt !== "string" || !rawPrompt.trim()) {
         return res.status(400).json({ ok: false, error: "The rawPrompt parameter is required and must be a non-empty string." });
       }
 
+      // Resolve the correct prompt recipe
+      const activeRecipeId = (recipeId && isValidRecipeId(recipeId)) ? recipeId : "blueprint";
+      const recipe = getRecipeById(activeRecipeId);
+
       // 1. Mock mode logic
       if (mode === "mock") {
         try {
-          const blueprint = generateBlueprintForPrompt(rawPrompt, projectContext);
-          return res.json({ ok: true, blueprint });
+          const mockResult = recipe.mockGenerator(rawPrompt, projectContext);
+          if (activeRecipeId === "blueprint") {
+            return res.json({ ok: true, blueprint: mockResult });
+          } else {
+            return res.json(mockResult);
+          }
         } catch (mockErr: any) {
-          return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock blueprint." });
+          return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock recipe outcome." });
         }
       }
 
@@ -221,28 +230,12 @@ async function startServer() {
         });
       }
 
-      // Assemble human context context-payload smoothly
-      let userPromptContent = `Optimize the following user request:\n\n### USER REQUEST:\n"${rawPrompt}"\n\n`;
-
-      if (projectContext && projectContext.trim()) {
-        userPromptContent += `### EXTRA PROJECT CONTEXT:\n"${projectContext}"\n\n`;
-      }
-
-      if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
-        userPromptContent += `### CONVERSATION HISTORY:\n`;
-        conversationHistory.forEach((message: any) => {
-          const role = message.role === "assistant" ? "Assistant" : "User";
-          userPromptContent += `[${role}]: ${message.content}\n`;
-        });
-        userPromptContent += `\n`;
-      }
-
-      userPromptContent += `Structure your output exactly matching the described schema version '1.0'. Generate NO other text.`;
+      // Compile content prompt payload using the resolved recipe builder
+      const userPromptContent = recipe.userPayloadBuilder(rawPrompt, projectContext, conversationHistory);
 
       try {
         const config: any = {
-          systemInstruction: ENHANCER_SYSTEM_PROMPT,
-          responseMimeType: "application/json",
+          systemInstruction: recipe.systemInstruction,
           temperature: typeof settings?.temperature === 'number' ? settings.temperature : 0.2,
         };
 
@@ -252,13 +245,18 @@ async function startServer() {
           config.maxOutputTokens = 8192; // Generous default limit
         }
 
-        // Apply strict schema mode if enabled (defaults to true)
-        if (settings?.strictMode !== false) {
-          config.responseSchema = {
-            type: "OBJECT",
-            required: BLUEPRINT_OUTPUT_CONTRACT.required,
-            properties: BLUEPRINT_OUTPUT_CONTRACT.properties,
-          };
+        // Apply strict schema mode only for standard blueprint mode
+        if (activeRecipeId === "blueprint") {
+          config.responseMimeType = "application/json";
+          if (settings?.strictMode !== false) {
+            config.responseSchema = {
+              type: "OBJECT",
+              required: BLUEPRINT_OUTPUT_CONTRACT.required,
+              properties: BLUEPRINT_OUTPUT_CONTRACT.properties,
+            };
+          }
+        } else {
+          config.responseMimeType = "text/plain";
         }
 
         const chosenModel = settings?.model || "gemini-3.5-flash";
@@ -274,7 +272,19 @@ async function startServer() {
           throw new Error("Received an empty response from the Gemini model.");
         }
 
-        // Parse JSON output safely using the robust blueprint extraction helper
+        // For non-blueprint modes, bypass JSON parsing and validation
+        if (activeRecipeId !== "blueprint") {
+          return res.json({
+            ok: true,
+            recipeId: activeRecipeId,
+            outputKind: recipe.outputKind,
+            title: `${recipe.label} Output`,
+            content: textOutput,
+            structuredData: {}
+          });
+        }
+
+        // Parse JSON output safely using the robust blueprint extraction helper (exclusive to blueprint mode)
         const { parsedJson, parseError } = extractJsonBlueprint(textOutput);
 
         if (parseError || !parsedJson) {
@@ -285,7 +295,7 @@ async function startServer() {
           });
         }
 
-        // Validate the structure against exact schema
+        // Validate the structure against exact schema (exclusive to blueprint mode)
         const schemaIssues = validateBlueprint(parsedJson);
         if (schemaIssues) {
           return res.status(422).json({

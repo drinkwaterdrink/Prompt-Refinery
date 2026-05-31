@@ -31,18 +31,26 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     prompt: string,
     context: string,
     history: ConversationHistoryRow[],
-    bp: PromptBlueprint,
+    bpOrResult: any,
     mode: 'gemini' | 'mock',
-    activeTab: string
+    activeTab: string,
+    recipeId?: string
   ) => {
     // Clean all inputs and output structures using the recursive sanitizer
     const cleanPrompt = recursiveSanitize(prompt);
     const cleanContext = recursiveSanitize(context);
     const cleanHistory = recursiveSanitize(history);
-    const cleanBlueprint = recursiveSanitize(bp);
+    const cleanBpOrResult = recursiveSanitize(bpOrResult);
 
-    const title = bp.title?.trim() || `${cleanPrompt.substring(0, 30)}...`;
-    const summary = bp.summary?.trim() || "No summary details successfully mapped.";
+    const isBlueprint = bpOrResult && ('schema_version' in bpOrResult || !('content' in bpOrResult));
+    
+    const title = isBlueprint 
+      ? (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`)
+      : (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`);
+      
+    const summary = isBlueprint
+      ? (bpOrResult.summary?.trim() || "No summary details successfully mapped.")
+      : (bpOrResult.content ? `${bpOrResult.content.substring(0, 80)}...` : "Recipe output generated.");
 
     const newItem: WorkflowHistoryItem = {
       id: `run_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -53,7 +61,9 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       rawPrompt: cleanPrompt,
       projectContext: cleanContext,
       conversationHistory: cleanHistory,
-      blueprint: cleanBlueprint,
+      recipeId: recipeId || (isBlueprint ? 'blueprint' : bpOrResult.recipeId),
+      blueprint: isBlueprint ? cleanBpOrResult : undefined,
+      recipeResult: !isBlueprint ? cleanBpOrResult : undefined,
       selectedTab: activeTab
     };
 

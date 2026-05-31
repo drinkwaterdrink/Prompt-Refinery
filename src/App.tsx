@@ -81,11 +81,12 @@ export default function App() {
     prompt: string,
     context: string,
     history: ConversationHistoryRow[],
-    bp: any,
+    bpOrResult: any,
     mode: 'gemini' | 'mock',
-    tab: string
+    tab: string,
+    recipeId?: string
   ) => {
-    saveToWorkflowHistory(prompt, context, history, bp, mode, tab);
+    saveToWorkflowHistory(prompt, context, history, bpOrResult, mode, tab, recipeId);
   };
 
   // Generation Hook
@@ -94,6 +95,10 @@ export default function App() {
     generationStep,
     blueprint,
     setBlueprint,
+    recipeResult,
+    setRecipeResult,
+    selectedRecipeId,
+    setSelectedRecipeId,
     validationErrors,
     setValidationErrors,
     geminiError,
@@ -124,6 +129,8 @@ export default function App() {
 
   // Pre-fill templates helper
   const applyPreset = (presetType: 'workout' | 'dashboard') => {
+    // Reset to blueprint mode first for pre-fills
+    setSelectedRecipeId('blueprint');
     if (presetType === 'workout') {
       setRawPrompt('build me an app to track my workouts');
       setProjectContext('Must support offline use with LocalStorage catalog, dark warm aesthetic, and an XP/level progress system.');
@@ -150,7 +157,7 @@ export default function App() {
 
   // Refine Blueprint wrapper
   const handleRefineBlueprint = () => {
-    refineBlueprint(rawPrompt, projectContext, historyRows, activeTab);
+    handleRefineBlueprint();
   };
 
   // Clipboard Copier
@@ -170,6 +177,10 @@ export default function App() {
   };
 
   const handleExportMarkdown = () => {
+    if (recipeResult) {
+      downloadMarkdown(recipeResult.content, `${recipeResult.title.replace(/\s+/g, '_')}.md`);
+      return;
+    }
     if (!blueprint) return;
     downloadMarkdown(blueprint.final_prompt, `${blueprint.title.replace(/\s+/g, '_')}_final_prompt.md`);
   };
@@ -199,6 +210,8 @@ export default function App() {
 
       if (result.type === 'blueprint') {
         setBlueprint(result.data);
+        setRecipeResult(null);
+        setSelectedRecipeId('blueprint');
         setValidationErrors(null);
         setGeminiError(null);
         // Sync inputs
@@ -226,7 +239,9 @@ export default function App() {
     setRawPrompt(item.rawPrompt);
     setProjectContext(item.projectContext || '');
     setHistoryRows(item.conversationHistory || []);
-    setBlueprint(item.blueprint);
+    setBlueprint(item.blueprint || null);
+    setRecipeResult(item.recipeResult || null);
+    setSelectedRecipeId((item.recipeId as any) || 'blueprint');
     setValidationErrors(null);
     setGeminiError(null);
     setRejectionStates({});
@@ -242,6 +257,8 @@ export default function App() {
     setProjectContext('');
     setHistoryRows([]);
     setBlueprint(null);
+    setRecipeResult(null);
+    setSelectedRecipeId('blueprint');
     setValidationErrors(null);
     setGeminiError(null);
     setForceValidationError(false);
@@ -372,6 +389,8 @@ export default function App() {
           setGenerationMode={setGenerationMode}
           isGenerating={isGenerating}
           debugMode={debugMode}
+          selectedRecipeId={selectedRecipeId}
+          setSelectedRecipeId={setSelectedRecipeId}
           onClear={handleClear}
           onSubmit={handleEnhancePrompt}
           showToast={showToast}
@@ -381,7 +400,7 @@ export default function App() {
         <section className="lg:col-span-7 flex flex-col" id="right-preview-panel">
           <div className="flex-1 bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl flex flex-col overflow-hidden min-h-[500px] shadow-2xl">
             
-            {!isGenerating && !blueprint && !validationErrors && !geminiError && (
+            {!isGenerating && !blueprint && !recipeResult && !validationErrors && !geminiError && (
               <EmptyBlueprintState />
             )}
 
@@ -389,9 +408,10 @@ export default function App() {
               <LoadingState generationStep={generationStep} />
             )}
 
-            {!isGenerating && (blueprint || validationErrors || geminiError) && (
+            {!isGenerating && (blueprint || recipeResult || validationErrors || geminiError) && (
               <BlueprintExplorer
                 blueprint={blueprint}
+                recipeResult={recipeResult}
                 validationErrors={validationErrors}
                 geminiError={geminiError}
                 rawOutput={rawOutput}
@@ -480,7 +500,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v1.01 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v1.02 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>

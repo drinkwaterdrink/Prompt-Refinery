@@ -16,10 +16,11 @@ import {
   Zap,
   RefreshCw
 } from 'lucide-react';
-import { PromptBlueprint } from '../types';
+import { PromptBlueprint, GenericRecipeResult } from '../types';
 
 interface BlueprintExplorerProps {
   blueprint: PromptBlueprint | null;
+  recipeResult: GenericRecipeResult | null;
   validationErrors: string[] | null;
   geminiError: string | null;
   rawOutput: string | null;
@@ -45,6 +46,7 @@ interface BlueprintExplorerProps {
 
 export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
   blueprint,
+  recipeResult,
   validationErrors,
   geminiError,
   rawOutput,
@@ -68,6 +70,57 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
   debugMode
 }) => {
   if (isGenerating) return null;
+
+  // 0. IF RECIPE RESULT MODE (NON-BLUEPRINT RECIPES)
+  if (recipeResult) {
+    return (
+      <div className="flex-1 flex flex-col animate-fade-in" id="recipe-result-preview-state">
+        
+        {/* Banner with controls */}
+        <div className="px-4 py-3 bg-slate-950/20 border-b border-[#1F1F1F] flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-amber-400">✨</span>
+            <span className="text-[10px] font-mono tracking-wider uppercase font-bold text-[#D4AF37]">
+              Recipe: {recipeResult.recipeId.replace(/_/g, ' ')}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onCopy(recipeResult.content, 'Recipe Output')}
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              title="Copy output text to clipboard"
+            >
+              <Copy className="h-3.5 w-3.5 text-[#D4AF37]" /> Copy Content
+            </button>
+            <button
+              type="button"
+              onClick={() => onExportMarkdown()}
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              title="Export as Markdown file"
+            >
+              <Download className="h-3.5 w-3.5 text-[#D4AF37]" /> Export Markdown
+            </button>
+          </div>
+        </div>
+
+        {/* Content Explorer */}
+        <div className="p-5 border-b border-[#1F1F1F] bg-[#161616]/20">
+          <h2 className="font-serif text-lg md:text-xl font-bold text-[#D4AF37] italic flex items-center gap-2 leading-snug">
+            {recipeResult.title}
+          </h2>
+          <p className="text-[10px] text-slate-500 font-mono mt-1">FORMAT: {recipeResult.outputKind.toUpperCase()}</p>
+        </div>
+
+        <div className="flex-1 p-5 overflow-y-auto max-h-[620px] bg-[#0A0A0A] font-sans text-sm text-slate-350 leading-relaxed scroller-custom">
+          <pre className="whitespace-pre-wrap break-words font-sans text-xs bg-black/45 border border-[#262626] p-4 rounded-xl text-slate-300">
+            {recipeResult.content}
+          </pre>
+        </div>
+      </div>
+    );
+  }
 
   // 1. ON VALIDATION ERROR STATE
   if (validationErrors) {

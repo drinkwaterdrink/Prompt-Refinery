@@ -5,6 +5,15 @@
 
 import { BLUEPRINT_OUTPUT_CONTRACT } from './lib/prompt/enhancerSystemPrompt';
 
+export type PromptRecipeId =
+  | "blueprint"
+  | "idea_refinement"
+  | "technical_spec"
+  | "implementation_plan"
+  | "code_review"
+  | "black_swan"
+  | "design_audit";
+
 export interface ConversationHistoryRow {
   id: string;
   role: 'user' | 'assistant';
@@ -272,6 +281,15 @@ export function validateBlueprint(data: any): string[] | null {
   return errors.length > 0 ? errors : null;
 }
 
+export interface GenericRecipeResult {
+  ok: boolean;
+  recipeId: string;
+  outputKind: 'markdown' | 'json' | 'blueprint';
+  title: string;
+  content: string;
+  structuredData?: any;
+}
+
 export interface WorkflowHistoryItem {
   id: string;
   title: string;
@@ -281,7 +299,9 @@ export interface WorkflowHistoryItem {
   rawPrompt: string;
   projectContext: string;
   conversationHistory: ConversationHistoryRow[];
-  blueprint: PromptBlueprint;
+  recipeId?: string;
+  blueprint?: PromptBlueprint;
+  recipeResult?: GenericRecipeResult;
   selectedTab?: string;
 }
 
