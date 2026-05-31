@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import { generateBlueprintForPrompt } from "./src/mockData";
 import { validateBlueprint } from "./src/types";
 import { ENHANCER_SYSTEM_PROMPT, BLUEPRINT_OUTPUT_CONTRACT } from "./src/lib/prompt/enhancerSystemPrompt";
+import { recursiveSanitize } from "./src/lib/sanitize";
 
 dotenv.config();
 
@@ -302,20 +303,23 @@ async function startServer() {
 
       } catch (geminiError: any) {
         console.error("Gemini invocation failed:", geminiError);
+        const isDebug = settings?.debugMode === true;
         const classified = handleProviderError(geminiError);
         return res.status(classified.status).json({
           ok: false,
-          error: classified.message,
+          error: recursiveSanitize(classified.message),
           type: classified.type,
-          rawOutput: geminiError.stack || String(geminiError)
+          rawOutput: isDebug ? recursiveSanitize(geminiError.stack || String(geminiError)) : undefined
         });
       }
 
     } catch (routeError: any) {
       console.error("Endpoint execution error in POST /api/refine:", routeError);
+      const isDebug = req.body?.settings?.debugMode === true;
       return res.status(500).json({
         ok: false,
-        error: routeError.message || "An unexpected system error occurred on the development server."
+        error: "An unexpected system error occurred on the development server.",
+        rawOutput: isDebug ? recursiveSanitize(routeError.stack || String(routeError)) : undefined
       });
     }
   });
@@ -505,20 +509,23 @@ async function startServer() {
 
       } catch (geminiError: any) {
         console.error("Gemini refinement failed:", geminiError);
+        const isDebug = settings?.debugMode === true;
         const classified = handleProviderError(geminiError);
         return res.status(classified.status).json({
           ok: false,
-          error: classified.message,
+          error: recursiveSanitize(classified.message),
           type: classified.type,
-          rawOutput: geminiError.stack || String(geminiError)
+          rawOutput: isDebug ? recursiveSanitize(geminiError.stack || String(geminiError)) : undefined
         });
       }
 
     } catch (routeError: any) {
       console.error("Endpoint execution error in POST /api/refine-loop:", routeError);
+      const isDebug = req.body?.settings?.debugMode === true;
       return res.status(500).json({
         ok: false,
-        error: routeError.message || "An unexpected system error occurred on the development server."
+        error: "An unexpected system error occurred on the development server.",
+        rawOutput: isDebug ? recursiveSanitize(routeError.stack || String(routeError)) : undefined
       });
     }
   });
