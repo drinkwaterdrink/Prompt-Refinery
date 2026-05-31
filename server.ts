@@ -121,6 +121,60 @@ function extractJsonBlueprint(text: string): { parsedJson: any; parseError: stri
   };
 }
 
+/**
+ * Light-weight public GitHub context extractor
+ */
+async function extractGitHubContext(repoUrl: string): Promise<{ text: string; files: string[] }> {
+  const result = { text: "", files: [] as string[] };
+  if (!repoUrl || typeof repoUrl !== 'string' || !repoUrl.trim()) {
+    return result;
+  }
+
+  // Matches https://github.com/owner/repo or http://...
+  const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?\s]+)/);
+  if (!match) {
+    return result;
+  }
+
+  const owner = match[1];
+  let repo = match[2];
+  if (repo.endsWith('.git')) {
+    repo = repo.slice(0, -4);
+  }
+
+  const targetFiles = ["README.md", "package.json", "server.ts", "src/App.tsx", "src/main.tsx"];
+  const branches = ["main", "master"];
+  
+  let accumulated = "";
+
+  for (const file of targetFiles) {
+    let content = "";
+    let fetchedBranch = "";
+
+    for (const branch of branches) {
+      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file}`;
+      try {
+        const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        if (response.ok) {
+          content = await response.text();
+          fetchedBranch = branch;
+          break;
+        }
+      } catch (err) {
+        // Skip branch try next or fail silently
+      }
+    }
+
+    if (content && content.trim()) {
+      accumulated += `\n\n### REPOSITORY FILE: ${file} (Branch: ${fetchedBranch})\n\`\`\`\n${content.substring(0, 12000)}\n\`\`\`\n`;
+      result.files.push(file);
+    }
+  }
+
+  result.text = accumulated;
+  return result;
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json());
@@ -314,6 +368,215 @@ You must reason privately. Output valid JSON only, matching the requested schema
         ideas: fallbackIdeas,
         fallback: true
       });
+    }
+  });
+
+  // Iterative Project Ideas Mode endpoint
+  app.post("/api/project-ideas", async (req, res) => {
+    try {
+      const { projectName, repoUrl, projectContext, uploadedContextText, direction, mode, settings } = req.body;
+
+      // 1. Mock Mode Generator Fallback
+      if (mode === "mock") {
+        try {
+          const mockResponse = {
+            ok: true,
+            projectName: projectName || "My Copied Application",
+            repoUrl: repoUrl || "",
+            project_summary: `A React + TypeScript application focused on "${projectName || "Developer Productivity"}". It uses modern grid systems, modular hooks, and custom dark HSL aesthetics.`,
+            detected_app_type: "React Single Page Application (Vite + TSX)",
+            known_context_used: ["README.md", "package.json", "Uploaded Notes"],
+            assumptions: [
+              "Application utilizes LocalStorage or SessionStorage for state caching between reloads.",
+              "TailwindCSS or vanilla HSL design systems are used for presentation styling."
+            ],
+            strengths: [
+              "Clean separation of concerns with custom hooks and structured components.",
+              "Strong focus on responsive grid designs and premium dark themes."
+            ],
+            risks_or_gaps: [
+              "Lack of detailed client-side data validation may lead to runtime rendering exceptions.",
+              "Secrets are saved in history logs without adequate security encryption or redactors."
+            ],
+            suggested_improvements: [
+              {
+                id: "imp_1",
+                title: "Implement Strict Client-Side Input Validation",
+                summary: "Integrate a schema validation loop or custom type checks to block malformed inputs before processing.",
+                why_it_matters: "Prevents runtime rendering crashes and ensures UI consistency across all viewport densities.",
+                impact: "high",
+                effort: "low",
+                risk: "low",
+                category: "bugfix",
+                phase_prompt: `Review and refactor the input handlers in \`src/components/InputPanel.tsx\` to implement strict string bounds validation. Add user alert modals if validation fails. Do NOT adjust server code in this step.`,
+                acceptance_criteria: [
+                  "Empty inputs are blocked with immediate visual feedback.",
+                  "Custom length limits are enforced.",
+                  "Linter check builds successfully."
+                ]
+              },
+              {
+                id: "imp_2",
+                title: "Cohesive Amber Glassmorphism Layout Refinement",
+                summary: "Audit layouts to replace plain gray backdrops with translucent backdrop-blurs and golden shadows.",
+                why_it_matters: "Elevates visual appeal and user confidence, matching cohesive gold-accent theme specifications.",
+                impact: "medium",
+                effort: "low",
+                risk: "low",
+                category: "ux",
+                phase_prompt: `Upgrade \`src/index.css\` to define custom HSL amber glassmorphism variables. Apply \`backdrop-filter: blur(8px)\` and golden amber glow shadows to cards in \`src/components/\`.`,
+                acceptance_criteria: [
+                  "Visual review confirms glassmorphic panels.",
+                  "Hover states trigger subtle micro-animations.",
+                  "WCAG AA contrast ratios are preserved."
+                ]
+              },
+              {
+                id: "imp_3",
+                title: "Security Redactor for History Logs",
+                summary: "Add a recursive log redactor to scrub sensitive user input API keys prior to saving to history lists.",
+                why_it_matters: "Maintains local data safety and prevents credential leaks in shared environments.",
+                impact: "high",
+                effort: "medium",
+                risk: "low",
+                category: "security",
+                phase_prompt: `Create a new helper \`src/lib/sanitize.ts\` to redact sensitive credentials from local workflow logs. Ensure keys are replaced with \`[REDACTED]\` prior to saving.`,
+                acceptance_criteria: [
+                  "API keys are redacted in saved logs.",
+                  "Original inputs are preserved in active workspace memory.",
+                  "All tests pass successfully."
+                ]
+              }
+            ],
+            recommended_next_phase: "Refactoring the foundational UI forms and layout variables to apply cohesive glassmorphism visual rules (Stage 1)."
+          };
+
+          return res.json(mockResponse);
+        } catch (mockErr: any) {
+          return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock review plan." });
+        }
+      }
+
+      // 2. Real Gemini Mode Router
+      const { ai: activeClient, error: clientSetupError } = getGeminiClient(settings);
+      if (clientSetupError || !activeClient) {
+        return res.status(401).json({
+          ok: false,
+          error: clientSetupError || "Gemini Client could not be constructed."
+        });
+      }
+
+      // Attempt lightweight GitHub Raw context extraction
+      let combinedContextText = uploadedContextText || "";
+      let extractedFilesList: string[] = [];
+
+      if (repoUrl && repoUrl.trim()) {
+        try {
+          const gitExtraction = await extractGitHubContext(repoUrl);
+          if (gitExtraction.text) {
+            combinedContextText += gitExtraction.text;
+          }
+          extractedFilesList = gitExtraction.files;
+        } catch (err) {
+          console.error("Lightweight GitHub context extraction failed silently:", err);
+        }
+      }
+
+      // Assemble human review prompt contents
+      let userPrompt = `Perform a Code Review & Optimization Plan review for the following project:\n\n`;
+      userPrompt += `### PROJECT NAME: "${projectName || "Untitled Project"}"\n`;
+      if (repoUrl) userPrompt += `### GITHUB REPOSITORY: ${repoUrl}\n`;
+      userPrompt += `### CURRENT GOAL / TARGET DIRECTION: "${direction || "General optimization and bug risk audit"}"\n\n`;
+      userPrompt += `### PROJECT CONTEXT & ARCHITECTURE NOTES:\n${projectContext || "None provided"}\n\n`;
+      if (combinedContextText && combinedContextText.trim()) {
+        userPrompt += `### EXTRACTED FILES & REFERENCE CODE:\n${combinedContextText}\n\n`;
+      }
+      userPrompt += `Separate facts from assumptions. Highlight strengths and risks/gaps. Propose 3 to 5 highly specific Suggested Improvements matching the requested JSON format.`;
+
+      const projectIdeasSchema = {
+        type: "OBJECT",
+        required: ["ok", "project_summary", "detected_app_type", "known_context_used", "assumptions", "strengths", "risks_or_gaps", "suggested_improvements", "recommended_next_phase"],
+        properties: {
+          ok: { type: "BOOLEAN" },
+          project_summary: { type: "STRING" },
+          detected_app_type: { type: "STRING" },
+          known_context_used: { type: "ARRAY", items: { type: "STRING" } },
+          assumptions: { type: "ARRAY", items: { type: "STRING" } },
+          strengths: { type: "ARRAY", items: { type: "STRING" } },
+          risks_or_gaps: { type: "ARRAY", items: { type: "STRING" } },
+          suggested_improvements: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              required: ["id", "title", "summary", "why_it_matters", "impact", "effort", "risk", "category", "phase_prompt", "acceptance_criteria"],
+              properties: {
+                id: { type: "STRING" },
+                title: { type: "STRING" },
+                summary: { type: "STRING" },
+                why_it_matters: { type: "STRING" },
+                impact: { type: "STRING" },
+                effort: { type: "STRING" },
+                risk: { type: "STRING" },
+                category: { type: "STRING" },
+                phase_prompt: { type: "STRING" },
+                acceptance_criteria: { type: "ARRAY", items: { type: "STRING" } }
+              }
+            }
+          },
+          recommended_next_phase: { type: "STRING" }
+        }
+      };
+
+      const systemInstruction = `You are a Principal Product Engineer and Code Review Specialist.
+Your task is to analyze the provided project metadata (name, code context, goals, and direction) using the Code Review & Optimization Plan framework.
+Identify the application type, summarize the project, and outline concrete strengths, key assumptions, and risks/gaps.
+Recommend 3 to 5 atomic, highly focused, and implementable improvements.
+Conform to these rules:
+1. Separate known facts from assumptions.
+2. Recommend small, atomic milestones rather than broad code overhauls.
+3. For each improvement, provide a copy-paste-ready "phase_prompt" that directs a secondary coding agent (like Antigravity) to implement that specific step with precise instructions and target file scopes.
+4. Reason privately and step-by-step. Do not output any thinking or brain-storming tags (like <thinking>, <analysis>, or hidden CoT tags).
+5. Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.`;
+
+      try {
+        const chosenModel = settings?.model || "gemini-3.5-flash";
+        const response = await activeClient.models.generateContent({
+          model: chosenModel,
+          contents: userPrompt,
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: projectIdeasSchema,
+            temperature: typeof settings?.temperature === 'number' ? settings.temperature : 0.2,
+          }
+        });
+
+        const textOutput = response.text || "";
+        if (!textOutput.trim()) {
+          throw new Error("Received an empty response from Gemini during code review.");
+        }
+
+        const parsed = JSON.parse(textOutput);
+        
+        // Merge extracted files list into known context used
+        if (Array.isArray(parsed.known_context_used)) {
+          parsed.known_context_used = Array.from(new Set([...parsed.known_context_used, ...extractedFilesList]));
+        }
+
+        return res.json(parsed);
+
+      } catch (geminiError: any) {
+        console.error("Gemini Code Review failed:", geminiError);
+        const classified = handleProviderError(geminiError);
+        return res.status(classified.status).json({
+          ok: false,
+          error: recursiveSanitize(classified.message)
+        });
+      }
+
+    } catch (routeErr: any) {
+      console.error("Endpoint execution error in /api/project-ideas:", routeErr);
+      return res.status(500).json({ ok: false, error: "An unexpected system error occurred on the development server." });
     }
   });
 

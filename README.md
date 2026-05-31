@@ -4,8 +4,13 @@
 
 # Prompt Refinery
 
-**Version:** 0.04  
-An advanced, premium pre-compiler and modular planning workstation engineered to refine rough software ideas into precision-crafted prompt specifications, architectural blueprints, and atomic coding roadmaps optimized for secondary coding agents (like Antigravity or Cursor).
+**Version:** 0.05  
+Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
+
+
+## Features
+- **Iterative Project Mode**: Contextual codebase optimizer accepting project names, GitHub URLs, text notes, and text/markdown/json files (<200KB) to suggest improvements, identify risks, and construct copy-paste phase prompts with quick New-Prompt and Refinery-Pipeline triggers.
+- **Multi-Stage Refinery Pipeline**: An advanced planning workspace that progressively refines rough ideas through four progressive phases: Project Request Spec → Technical Spec → Implementation Plan → Final Vibe Prompt, featuring timeline unlocks, step copying, and bulk document exporting.
 
 ---
 

@@ -2,6 +2,23 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.05] - 2026-05-31
+
+### Added Iterative Project Mode & Optimization Planner (Phase 12)
+- Designed and built **Iterative Project Mode** allowing users to supply codebase context and directions to receive improvements, risks, technical gaps, and dev prompts.
+- Implemented the `POST /api/project-ideas` Express backend route in `server.ts` executing comprehensive optimization analysis and returning structured project plans.
+- Programmed a **lightweight public GitHub Raw Context Extractor** parsing public GitHub URLs and fetching core files (`README.md`, `package.json`, `server.ts`, `src/App.tsx`, `src/main.tsx`) raw from Raw GitHub content raw repositories asynchronously, appending them safely as reference code snippets.
+- Built the **ProjectInputPanel** React component rendering fields for Project Name, GitHub URL, PDP/Notes, Current Goal Direction, and a drag-and-drop browser file uploader supporting `.txt`, `.md`, and `.json` files <200KB.
+- Created the **ProjectWorkspace** React component displaying project summaries, app types, collapsible accordions (Assumptions, Strengths, Risks & Gaps, and Files checked), and category-sorted improvement cards.
+- Integrated colored impact/effort/risk badges and custom category tag styles (feature, UX, bugfix, refactor, performance, security, mobile, architecture).
+- Programmed quick card actions:
+  - *Copy Phase Prompt*: Copies the phase prompt to clipboard.
+  - *Use as Raw Prompt*: Swaps to New Prompt Mode, pre-populating input fields with the phase prompt and project context.
+  - *Send to Pipeline*: Swaps to Refinery Pipeline Mode, pre-populating sequential timelines with the phase prompt and context.
+- Programmed bulk review plan exporters (JSON/Markdown) and selected prompt copiers.
+- Extended the history manager in `useWorkflowHistory.ts` and `src/App.tsx` to save and restore Project Mode runs.
+- Aligned the application's footer version description to `v0.05`.
+
 ## [0.04] - 2026-05-31
 
 ### Added Multi-Stage Refinery Pipeline (Phase 11)

@@ -11,6 +11,7 @@ import { useToast } from './hooks/useToast';
 import { useWorkflowHistory } from './hooks/useWorkflowHistory';
 import { useBlueprintGeneration } from './hooks/useBlueprintGeneration';
 import { usePipelineWorkflow } from './hooks/usePipelineWorkflow';
+import { useProjectIterative } from './hooks/useProjectIterative';
 import { copyToClipboardSafe } from './lib/clipboard';
 import { detectAndParseImport } from './lib/json';
 import { downloadJSON, downloadMarkdown } from './lib/exporters';
@@ -24,6 +25,8 @@ import { WorkflowHistorySidebar } from './components/WorkflowHistorySidebar';
 import { InputPanel } from './components/InputPanel';
 import { BlueprintExplorer } from './components/BlueprintExplorer';
 import { PipelineWorkspace } from './components/PipelineWorkspace';
+import { ProjectWorkspace } from './components/ProjectWorkspace';
+import { ProjectInputPanel } from './components/ProjectInputPanel';
 import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
 import { SparkIdea } from './types';
 
@@ -88,8 +91,8 @@ export default function App() {
     clearAllWorkflowHistory
   } = useWorkflowHistory(showToast);
 
-  // Workflow mode selector: blueprint vs pipeline
-  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline'>('blueprint');
+  // Workflow mode selector: blueprint vs pipeline vs project
+  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline' | 'project'>('blueprint');
 
   // Wrapper for saving to workflow runs history
   const handleSaveToWorkflowHistory = (
@@ -191,6 +194,86 @@ export default function App() {
       );
     }
   });
+
+  // Project Iterative Hook
+  const {
+    projectName,
+    setProjectName,
+    repoUrl,
+    setRepoUrl,
+    projectContext: projectNotes,
+    setProjectContext: setProjectNotes,
+    uploadedFileName,
+    setUploadedFileName,
+    uploadedContextText,
+    setUploadedContextText,
+    direction,
+    setDirection,
+    isGeneratingProject,
+    projectResult,
+    setProjectResult,
+    projectError,
+    setProjectError,
+    clearProject,
+    loadProjectResult,
+    analyzeProject
+  } = useProjectIterative({
+    showToast,
+    saveToWorkflowHistory: (prompt, context, history, bpOrResult, mode, activeTab, recipeId, sparkTitle, sparkNovelty, sparkTags, type, pipeline, projectResult) => {
+      const matchesSpark = activeSpark && prompt === activeSpark.rawPrompt;
+      saveToWorkflowHistory(
+        prompt,
+        context,
+        history,
+        bpOrResult,
+        mode,
+        activeTab,
+        recipeId,
+        matchesSpark ? activeSpark.title : undefined,
+        matchesSpark ? activeSpark.novelty : undefined,
+        matchesSpark ? activeSpark.tags : undefined,
+        type,
+        pipeline,
+        projectResult
+      );
+    }
+  });
+
+  const handleProjectSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    analyzeProject(generationMode, {
+      model,
+      temperature,
+      maxOutputTokens,
+      strictMode,
+      browserApiKey,
+      debugMode
+    });
+  };
+
+  const handleUseAsRawPrompt = (phasePrompt: string, projectSummary: string) => {
+    setRawPrompt(phasePrompt);
+    const combinedContext = `${projectSummary}\n\n### ORIGINAL CONTEXT REFERENCE:\n${projectNotes}`;
+    setProjectContext(combinedContext);
+    setHistoryRows([]);
+    setIsHistoryCollapsed(true);
+    setBlueprint(null);
+    setRecipeResult(null);
+    setSelectedRecipeId('blueprint');
+    setWorkflowMode('blueprint');
+    showToast('Loaded phase prompt into workspace inputs. Ready to Enhance!');
+  };
+
+  const handleSendToPipeline = (phasePrompt: string, projectSummary: string) => {
+    setRawPrompt(phasePrompt);
+    const combinedContext = `${projectSummary}\n\n### ORIGINAL CONTEXT REFERENCE:\n${projectNotes}`;
+    setProjectContext(combinedContext);
+    setHistoryRows([]);
+    setIsHistoryCollapsed(true);
+    startPipeline(phasePrompt, combinedContext, []);
+    setWorkflowMode('pipeline');
+    showToast('Sent optimization phase prompt to Refinery Pipeline workflow!');
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -382,14 +465,22 @@ export default function App() {
     setGeminiError(null);
     setRejectionStates({});
 
-    if (item.type === 'pipeline' && item.pipeline) {
+    if (item.type === 'project' && item.projectResult) {
+      setWorkflowMode('project');
+      loadProjectResult(item.projectResult, item.rawPrompt, item.projectContext);
+      setBlueprint(null);
+      setRecipeResult(null);
+      clearPipeline();
+    } else if (item.type === 'pipeline' && item.pipeline) {
       setWorkflowMode('pipeline');
       loadPipeline(item.pipeline);
       setBlueprint(null);
       setRecipeResult(null);
+      clearProject();
     } else {
       setWorkflowMode('blueprint');
       clearPipeline();
+      clearProject();
       setBlueprint(item.blueprint || null);
       setRecipeResult(item.recipeResult || null);
       setSelectedRecipeId((item.recipeId as any) || 'blueprint');
@@ -414,6 +505,7 @@ export default function App() {
     setIsHistoryCollapsed(true);
     setRejectionStates({});
     clearPipeline();
+    clearProject();
     showToast('Controls cleared.');
   };
 
@@ -519,33 +611,56 @@ export default function App() {
       <main className="flex-1 w-full max-w-[1700px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Side: Inputs and Controls Panel */}
-        <InputPanel
-          rawPrompt={rawPrompt}
-          setRawPrompt={setRawPrompt}
-          projectContext={projectContext}
-          setProjectContext={setProjectContext}
-          historyRows={historyRows}
-          setHistoryRows={setHistoryRows}
-          isHistoryCollapsed={isHistoryCollapsed}
-          setIsHistoryCollapsed={setIsHistoryCollapsed}
-          forceValidationError={forceValidationError}
-          setForceValidationError={setForceValidationError}
-          generationMode={generationMode}
-          setGenerationMode={setGenerationMode}
-          isGenerating={isGenerating}
-          debugMode={debugMode}
-          selectedRecipeId={selectedRecipeId}
-          setSelectedRecipeId={setSelectedRecipeId}
-          onClear={handleClear}
-          onSubmit={handleEnhancePrompt}
-          showToast={showToast}
-        />
+        {workflowMode === 'project' ? (
+          <ProjectInputPanel
+            projectName={projectName}
+            setProjectName={setProjectName}
+            repoUrl={repoUrl}
+            setRepoUrl={setRepoUrl}
+            projectContext={projectNotes}
+            setProjectContext={setProjectNotes}
+            uploadedFileName={uploadedFileName}
+            setUploadedFileName={setUploadedFileName}
+            uploadedContextText={uploadedContextText}
+            setUploadedContextText={setUploadedContextText}
+            direction={direction}
+            setDirection={setDirection}
+            isGeneratingProject={isGeneratingProject}
+            generationMode={generationMode}
+            setGenerationMode={setGenerationMode}
+            onClear={handleClear}
+            onSubmit={handleProjectSubmit}
+            showToast={showToast}
+          />
+        ) : (
+          <InputPanel
+            rawPrompt={rawPrompt}
+            setRawPrompt={setRawPrompt}
+            projectContext={projectContext}
+            setProjectContext={setProjectContext}
+            historyRows={historyRows}
+            setHistoryRows={setHistoryRows}
+            isHistoryCollapsed={isHistoryCollapsed}
+            setIsHistoryCollapsed={setIsHistoryCollapsed}
+            forceValidationError={forceValidationError}
+            setForceValidationError={setForceValidationError}
+            generationMode={generationMode}
+            setGenerationMode={setGenerationMode}
+            isGenerating={isGenerating}
+            debugMode={debugMode}
+            selectedRecipeId={selectedRecipeId}
+            setSelectedRecipeId={setSelectedRecipeId}
+            onClear={handleClear}
+            onSubmit={handleEnhancePrompt}
+            showToast={showToast}
+          />
+        )}
 
         {/* Right Side: Generation Result / Output Preview Column */}
         <section className="lg:col-span-7 flex flex-col" id="right-preview-panel">
           
           {/* Workflow Mode Selector tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl mb-4 self-start">
+          <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl mb-4 self-start flex-wrap sm:flex-nowrap animate-fade-in">
             <button
               type="button"
               onClick={() => setWorkflowMode('blueprint')}
@@ -555,7 +670,7 @@ export default function App() {
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
               }`}
             >
-              ⚡ Quick Blueprint
+              ⚡ New Prompt Mode
             </button>
             <button
               type="button"
@@ -568,11 +683,32 @@ export default function App() {
             >
               ⛓️ Refinery Pipeline
             </button>
+            <button
+              type="button"
+              onClick={() => setWorkflowMode('project')}
+              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                workflowMode === 'project'
+                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+              }`}
+            >
+              🔍 Iterative Project Mode
+            </button>
           </div>
 
           <div className="flex-1 bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl flex flex-col overflow-hidden min-h-[500px] shadow-2xl">
             
-            {workflowMode === 'pipeline' ? (
+            {workflowMode === 'project' ? (
+              <ProjectWorkspace
+                result={projectResult}
+                isGeneratingProject={isGeneratingProject}
+                projectError={projectError}
+                onCopy={handleCopy}
+                onUseAsRawPrompt={handleUseAsRawPrompt}
+                onSendToPipeline={handleSendToPipeline}
+                showToast={showToast}
+              />
+            ) : workflowMode === 'pipeline' ? (
               <PipelineWorkspace
                 pipeline={pipeline}
                 stageStatuses={stageStatuses}
@@ -689,7 +825,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v0.04 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v0.05 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>

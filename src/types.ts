@@ -330,6 +330,33 @@ export interface RefineryPipeline {
   updatedAt: string;
 }
 
+export interface SuggestedImprovement {
+  id: string;
+  title: string;
+  summary: string;
+  why_it_matters: string;
+  impact: 'low' | 'medium' | 'high';
+  effort: 'low' | 'medium' | 'high';
+  risk: 'low' | 'medium' | 'high';
+  category: 'feature' | 'ux' | 'bugfix' | 'refactor' | 'performance' | 'security' | 'prompt-quality' | 'deployment' | 'mobile' | 'architecture';
+  phase_prompt: string;
+  acceptance_criteria: string[];
+}
+
+export interface ProjectImprovementResult {
+  ok: boolean;
+  projectName: string;
+  repoUrl?: string;
+  project_summary: string;
+  detected_app_type: string;
+  known_context_used: string[];
+  assumptions: string[];
+  strengths: string[];
+  risks_or_gaps: string[];
+  suggested_improvements: SuggestedImprovement[];
+  recommended_next_phase: string;
+}
+
 export interface WorkflowHistoryItem {
   id: string;
   title: string;
@@ -346,7 +373,8 @@ export interface WorkflowHistoryItem {
   sparkTitle?: string;
   sparkNovelty?: 'practical' | 'unusual' | 'black-swan';
   sparkTags?: string[];
-  type?: 'blueprint' | 'pipeline';
+  type?: 'blueprint' | 'pipeline' | 'project';
   pipeline?: RefineryPipeline;
+  projectResult?: ProjectImprovementResult;
 }
 
