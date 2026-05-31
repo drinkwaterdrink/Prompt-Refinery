@@ -12,7 +12,8 @@ export type PromptRecipeId =
   | "implementation_plan"
   | "code_review"
   | "black_swan"
-  | "design_audit";
+  | "design_audit"
+  | "final_vibe";
 
 export interface ConversationHistoryRow {
   id: string;
@@ -305,6 +306,30 @@ export type SparkIdea = {
   whyNow?: string;
 };
 
+export interface PipelineStageResult {
+  recipeId: string;
+  outputKind: 'markdown' | 'json';
+  title: string;
+  content: string;
+  structuredData?: any;
+}
+
+export interface RefineryPipeline {
+  id: string;
+  title: string;
+  rawPrompt: string;
+  projectContext: string;
+  conversationHistory: ConversationHistoryRow[];
+  stages: {
+    projectRequest?: PipelineStageResult;
+    technicalSpec?: PipelineStageResult;
+    implementationPlan?: PipelineStageResult;
+    finalVibePrompt?: PipelineStageResult;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkflowHistoryItem {
   id: string;
   title: string;
@@ -321,5 +346,7 @@ export interface WorkflowHistoryItem {
   sparkTitle?: string;
   sparkNovelty?: 'practical' | 'unusual' | 'black-swan';
   sparkTags?: string[];
+  type?: 'blueprint' | 'pipeline';
+  pipeline?: RefineryPipeline;
 }
 

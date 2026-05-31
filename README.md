@@ -4,13 +4,14 @@
 
 # Prompt Refinery
 
-**Version:** 0.03  
+**Version:** 0.04  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
 
 
 ## Features
+- **Multi-Stage Refinery Pipeline**: An advanced planning workspace that progressively refines rough ideas through four progressive phases: Project Request Spec → Technical Spec → Implementation Plan → Final Vibe Prompt, featuring timeline unlocks, step copying, and bulk document exporting.
 - **Creative Spark Catalyst**: A dynamic app idea generator featuring Practical, Unusual, and Black-Swan concept generation modes, equipped with full offline fallbacks.
-- **Prompt Recipe Engine**: Supports multiple specialized generation targets (Blueprint, Idea Refinement, Technical Spec, Implementation Plan, Code Review, Design Audit, Black-Swan Ideation).
+- **Prompt Recipe Engine**: Supports multiple specialized generation targets (Blueprint, Idea Refinement, Technical Spec, Implementation Plan, Code Review, Design Audit, Black-Swan Ideation, Final Vibe Prompt).
 - **Stunning UI Selector**: Premium selector dropdown inside input configuration pane.
 - **Scrollable Markdown Viewports**: Displays plain-text recipe outcomes cleanly in a high-fidelity rendering panel.
 

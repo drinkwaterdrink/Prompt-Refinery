@@ -10,7 +10,8 @@ export type PromptRecipeId =
   | "implementation_plan"
   | "code_review"
   | "black_swan"
-  | "design_audit";
+  | "design_audit"
+  | "final_vibe";
 
 export interface PromptRecipe {
   id: PromptRecipeId;

@@ -2,6 +2,21 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.04] - 2026-05-31
+
+### Added Multi-Stage Refinery Pipeline (Phase 11)
+- Designed and implemented a visual timeline workspace to progressively compile rough prompts through four distinct stages:
+  - **Stage 1 (Project Request Spec)**: Refines rough ideas into clear markdown product requests using the `idea_refinement` recipe.
+  - **Stage 2 (Technical Specification)**: Synthesizes multi-layer system architecture stacks by appending Stage 1 outcomes using the `technical_spec` recipe.
+  - **Stage 3 (Implementation Plan)**: Formulates actionable step-by-step modular coding plans using the `implementation_plan` recipe.
+  - **Stage 4 (Final Vibe Prompt)**: Fuses all preceding stage specifications into a high-fidelity single-step prompt optimized for secondary coding agents using a new custom `final_vibe` recipe.
+- Added a premium, gold-accented **Workflow Mode selector toggle tab** above the right panel workspace allowing seamless swapping between "Quick Blueprint" (default) and "Refinery Pipeline".
+- Engineered the custom state hook `usePipelineWorkflow.ts` to manage loading statuses (`empty`, `generating`, `complete`, `error`), sequential error catching, and complete pipeline state saves.
+- Implemented **Progressive Context Accumulation** inside the pipeline state manager to automatically compile preceding stage outputs and append them as reference specs to subsequent stage payloads.
+- Enforced **Sequential Unlock Gates** to block later timeline stages until all preceding prerequisites have compiled successfully.
+- Added quick stage-action controls for copying content to the clipboard, exporting individual stage markdowns, and downloading whole-pipeline bulk data in JSON and compiled Markdown document formats.
+- Integrated dual-mode loading restoration inside `useWorkflowHistory.ts` and `src/App.tsx` to restore complete pipeline stage sets, timeline badges, and panel modes cleanly from saved sidebar history.
+
 ## [0.03] - 2026-05-31
 
 ### Added Creative Spark Catalyst & Black-Swan Ideation

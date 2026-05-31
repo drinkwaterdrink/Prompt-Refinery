@@ -11,6 +11,7 @@ import { implementationPlanRecipe } from './implementationPlanRecipe';
 import { codeReviewRecipe } from './codeReviewRecipe';
 import { designPrinciplesRecipe } from './designPrinciples';
 import { blackSwanRecipe } from './blackSwanRecipe';
+import { finalVibeRecipe } from './finalVibeRecipe';
 
 export const ALL_PROMPT_RECIPES: PromptRecipe[] = [
   blueprintRecipe,
@@ -19,7 +20,8 @@ export const ALL_PROMPT_RECIPES: PromptRecipe[] = [
   implementationPlanRecipe,
   codeReviewRecipe,
   blackSwanRecipe,
-  designPrinciplesRecipe
+  designPrinciplesRecipe,
+  finalVibeRecipe
 ];
 
 const RECIPE_MAP: Record<PromptRecipeId, PromptRecipe> = {
@@ -29,7 +31,8 @@ const RECIPE_MAP: Record<PromptRecipeId, PromptRecipe> = {
   implementation_plan: implementationPlanRecipe,
   code_review: codeReviewRecipe,
   black_swan: blackSwanRecipe,
-  design_audit: designPrinciplesRecipe
+  design_audit: designPrinciplesRecipe,
+  final_vibe: finalVibeRecipe
 };
 
 export function getRecipeById(id: PromptRecipeId): PromptRecipe {

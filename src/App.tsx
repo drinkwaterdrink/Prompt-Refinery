@@ -10,6 +10,7 @@ import { ConversationHistoryRow, WorkflowHistoryItem } from './types';
 import { useToast } from './hooks/useToast';
 import { useWorkflowHistory } from './hooks/useWorkflowHistory';
 import { useBlueprintGeneration } from './hooks/useBlueprintGeneration';
+import { usePipelineWorkflow } from './hooks/usePipelineWorkflow';
 import { copyToClipboardSafe } from './lib/clipboard';
 import { detectAndParseImport } from './lib/json';
 import { downloadJSON, downloadMarkdown } from './lib/exporters';
@@ -22,6 +23,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { WorkflowHistorySidebar } from './components/WorkflowHistorySidebar';
 import { InputPanel } from './components/InputPanel';
 import { BlueprintExplorer } from './components/BlueprintExplorer';
+import { PipelineWorkspace } from './components/PipelineWorkspace';
 import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
 import { SparkIdea } from './types';
 
@@ -86,6 +88,9 @@ export default function App() {
     clearAllWorkflowHistory
   } = useWorkflowHistory(showToast);
 
+  // Workflow mode selector: blueprint vs pipeline
+  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline'>('blueprint');
+
   // Wrapper for saving to workflow runs history
   const handleSaveToWorkflowHistory = (
     prompt: string,
@@ -145,6 +150,46 @@ export default function App() {
     debugMode,
     showToast,
     saveToWorkflowHistory: handleSaveToWorkflowHistory
+  });
+
+  // Pipeline Hook
+  const {
+    pipeline,
+    setPipeline,
+    stageStatuses,
+    setStageStatuses,
+    stageErrors,
+    setStageErrors,
+    startPipeline,
+    loadPipeline,
+    clearPipeline,
+    generateStage
+  } = usePipelineWorkflow({
+    generationMode,
+    model,
+    temperature,
+    maxOutputTokens,
+    strictMode,
+    browserApiKey,
+    debugMode,
+    showToast,
+    saveToWorkflowHistory: (prompt, context, history, bpOrResult, mode, activeTab, recipeId, sparkTitle, sparkNovelty, sparkTags, type, pipeline) => {
+      const matchesSpark = activeSpark && prompt === activeSpark.rawPrompt;
+      saveToWorkflowHistory(
+        prompt,
+        context,
+        history,
+        bpOrResult,
+        mode,
+        activeTab,
+        recipeId,
+        matchesSpark ? activeSpark.title : undefined,
+        matchesSpark ? activeSpark.novelty : undefined,
+        matchesSpark ? activeSpark.tags : undefined,
+        type,
+        pipeline
+      );
+    }
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -333,14 +378,24 @@ export default function App() {
     setRawPrompt(item.rawPrompt);
     setProjectContext(item.projectContext || '');
     setHistoryRows(item.conversationHistory || []);
-    setBlueprint(item.blueprint || null);
-    setRecipeResult(item.recipeResult || null);
-    setSelectedRecipeId((item.recipeId as any) || 'blueprint');
     setValidationErrors(null);
     setGeminiError(null);
     setRejectionStates({});
-    if (item.selectedTab) {
-      setActiveTab(item.selectedTab as any);
+
+    if (item.type === 'pipeline' && item.pipeline) {
+      setWorkflowMode('pipeline');
+      loadPipeline(item.pipeline);
+      setBlueprint(null);
+      setRecipeResult(null);
+    } else {
+      setWorkflowMode('blueprint');
+      clearPipeline();
+      setBlueprint(item.blueprint || null);
+      setRecipeResult(item.recipeResult || null);
+      setSelectedRecipeId((item.recipeId as any) || 'blueprint');
+      if (item.selectedTab) {
+        setActiveTab(item.selectedTab as any);
+      }
     }
     showToast(`Restored: "${item.title}"`);
   };
@@ -358,6 +413,7 @@ export default function App() {
     setForceValidationError(false);
     setIsHistoryCollapsed(true);
     setRejectionStates({});
+    clearPipeline();
     showToast('Controls cleared.');
   };
 
@@ -487,42 +543,86 @@ export default function App() {
 
         {/* Right Side: Generation Result / Output Preview Column */}
         <section className="lg:col-span-7 flex flex-col" id="right-preview-panel">
+          
+          {/* Workflow Mode Selector tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl mb-4 self-start">
+            <button
+              type="button"
+              onClick={() => setWorkflowMode('blueprint')}
+              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                workflowMode === 'blueprint'
+                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+              }`}
+            >
+              ⚡ Quick Blueprint
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkflowMode('pipeline')}
+              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                workflowMode === 'pipeline'
+                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+              }`}
+            >
+              ⛓️ Refinery Pipeline
+            </button>
+          </div>
+
           <div className="flex-1 bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl flex flex-col overflow-hidden min-h-[500px] shadow-2xl">
             
-            {!isGenerating && !blueprint && !recipeResult && !validationErrors && !geminiError && (
-              <EmptyBlueprintState />
-            )}
-
-            {isGenerating && (
-              <LoadingState generationStep={generationStep} />
-            )}
-
-            {!isGenerating && (blueprint || recipeResult || validationErrors || geminiError) && (
-              <BlueprintExplorer
-                blueprint={blueprint}
-                recipeResult={recipeResult}
-                validationErrors={validationErrors}
-                geminiError={geminiError}
-                rawOutput={rawOutput}
-                isGenerating={isGenerating}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                rejectionStates={rejectionStates}
-                setRejectionStates={setRejectionStates}
-                isRefining={isRefining}
-                refinementError={refinementError}
-                revisionCount={revisionCount}
-                lastRefined={lastRefined}
-                onEnhancePrompt={handleEnhancePrompt}
-                onRefineBlueprint={handleRefineBlueprint}
+            {workflowMode === 'pipeline' ? (
+              <PipelineWorkspace
+                pipeline={pipeline}
+                stageStatuses={stageStatuses}
+                stageErrors={stageErrors}
+                onGenerateStage={(key) => generateStage(key, rawPrompt, projectContext, historyRows)}
                 onCopy={handleCopy}
-                onExportJSON={handleExportJSON}
-                onExportMarkdown={handleExportMarkdown}
-                onExportVibePacket={handleExportVibePacket}
-                setGenerationMode={setGenerationMode}
-                setGeminiError={setGeminiError}
-                debugMode={debugMode}
+                rawPrompt={rawPrompt}
+                projectContext={projectContext}
+                conversationHistory={historyRows}
+                generationMode={generationMode}
+                showToast={showToast}
               />
+            ) : (
+              <>
+                {!isGenerating && !blueprint && !recipeResult && !validationErrors && !geminiError && (
+                  <EmptyBlueprintState />
+                )}
+
+                {isGenerating && (
+                  <LoadingState generationStep={generationStep} />
+                )}
+
+                {!isGenerating && (blueprint || recipeResult || validationErrors || geminiError) && (
+                  <BlueprintExplorer
+                    blueprint={blueprint}
+                    recipeResult={recipeResult}
+                    validationErrors={validationErrors}
+                    geminiError={geminiError}
+                    rawOutput={rawOutput}
+                    isGenerating={isGenerating}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    rejectionStates={rejectionStates}
+                    setRejectionStates={setRejectionStates}
+                    isRefining={isRefining}
+                    refinementError={refinementError}
+                    revisionCount={revisionCount}
+                    lastRefined={lastRefined}
+                    onEnhancePrompt={handleEnhancePrompt}
+                    onRefineBlueprint={handleRefineBlueprint}
+                    onCopy={handleCopy}
+                    onExportJSON={handleExportJSON}
+                    onExportMarkdown={handleExportMarkdown}
+                    onExportVibePacket={handleExportVibePacket}
+                    setGenerationMode={setGenerationMode}
+                    setGeminiError={setGeminiError}
+                    debugMode={debugMode}
+                  />
+                )}
+              </>
             )}
 
           </div>
