@@ -357,6 +357,39 @@ export interface ProjectImprovementResult {
   recommended_next_phase: string;
 }
 
+export interface SuggestedIssue {
+  id: string;
+  severity: 'low' | 'medium' | 'high';
+  category: 'layout' | 'typography' | 'color' | 'accessibility' | 'mobile' | 'motion' | 'component-state' | 'density' | 'navigation';
+  problem: string;
+  why_it_matters: string;
+  recommended_fix: string;
+}
+
+export interface DesignAuditResult {
+  ok: boolean;
+  projectName: string;
+  title: string;
+  summary: string;
+  overall_score: number;
+  scores: {
+    layout: number;
+    visual_hierarchy: number;
+    accessibility: number;
+    mobile_usability: number;
+    interaction_feedback: number;
+    performance_feel: number;
+    design_consistency: number;
+  };
+  strengths: string[];
+  issues: SuggestedIssue[];
+  quick_wins: string[];
+  deeper_improvements: string[];
+  implementation_prompt: string;
+  targetDevice?: string;
+  stylePreference?: string;
+}
+
 export interface WorkflowHistoryItem {
   id: string;
   title: string;
@@ -373,8 +406,9 @@ export interface WorkflowHistoryItem {
   sparkTitle?: string;
   sparkNovelty?: 'practical' | 'unusual' | 'black-swan';
   sparkTags?: string[];
-  type?: 'blueprint' | 'pipeline' | 'project';
+  type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit';
   pipeline?: RefineryPipeline;
   projectResult?: ProjectImprovementResult;
+  designAuditResult?: DesignAuditResult;
 }
 

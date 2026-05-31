@@ -38,9 +38,10 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     sparkTitle?: string,
     sparkNovelty?: 'practical' | 'unusual' | 'black-swan',
     sparkTags?: string[],
-    type?: 'blueprint' | 'pipeline' | 'project',
+    type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit',
     pipeline?: any,
-    projectResult?: any
+    projectResult?: any,
+    designAuditResult?: any
   ) => {
     // Clean all inputs and output structures using the recursive sanitizer
     const cleanPrompt = recursiveSanitize(prompt);
@@ -49,24 +50,29 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     const cleanBpOrResult = recursiveSanitize(bpOrResult);
     const cleanPipeline = recursiveSanitize(pipeline);
     const cleanProjectResult = recursiveSanitize(projectResult);
+    const cleanDesignAuditResult = recursiveSanitize(designAuditResult);
 
-    const isBlueprint = type !== 'pipeline' && type !== 'project' && bpOrResult && ('schema_version' in bpOrResult || !('content' in bpOrResult));
+    const isBlueprint = type !== 'pipeline' && type !== 'project' && type !== 'design_audit' && bpOrResult && ('schema_version' in bpOrResult || !('content' in bpOrResult));
     
     const title = type === 'pipeline'
       ? (cleanPipeline?.title || `Pipeline: ${cleanPrompt.substring(0, 30)}...`)
       : type === 'project'
         ? (`Review: ${cleanProjectResult?.projectName || cleanPrompt.substring(0, 30)}...`)
-        : (isBlueprint 
-          ? (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`)
-          : (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`));
+        : type === 'design_audit'
+          ? (`UX Audit: ${cleanDesignAuditResult?.projectName || cleanPrompt.substring(0, 30)}...`)
+          : (isBlueprint 
+            ? (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`)
+            : (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`));
       
     const summary = type === 'pipeline'
       ? `Refinery Pipeline (${Object.keys(cleanPipeline?.stages || {}).filter(k => cleanPipeline?.stages[k]).length}/4 completed stages)`
       : type === 'project'
         ? `Optimization Plan (${cleanProjectResult?.suggested_improvements?.length || 0} improvements suggested)`
-        : (isBlueprint
-          ? (bpOrResult.summary?.trim() || "No summary details successfully mapped.")
-          : (bpOrResult.content ? `${bpOrResult.content.substring(0, 80)}...` : "Recipe output generated."));
+        : type === 'design_audit'
+          ? `Design Principles Audit (UX Score: ${cleanDesignAuditResult?.overall_score || 0}/10)`
+          : (isBlueprint
+            ? (bpOrResult.summary?.trim() || "No summary details successfully mapped.")
+            : (bpOrResult.content ? `${bpOrResult.content.substring(0, 80)}...` : "Recipe output generated."));
 
     const newItem: WorkflowHistoryItem = {
       id: `run_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -79,14 +85,15 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       conversationHistory: cleanHistory,
       recipeId: recipeId || (isBlueprint ? 'blueprint' : bpOrResult?.recipeId),
       blueprint: isBlueprint ? cleanBpOrResult : undefined,
-      recipeResult: (!isBlueprint && type !== 'pipeline' && type !== 'project') ? cleanBpOrResult : undefined,
+      recipeResult: (!isBlueprint && type !== 'pipeline' && type !== 'project' && type !== 'design_audit') ? cleanBpOrResult : undefined,
       selectedTab: activeTab,
       sparkTitle,
       sparkNovelty,
       sparkTags,
       type: type || 'blueprint',
       pipeline: type === 'pipeline' ? cleanPipeline : undefined,
-      projectResult: type === 'project' ? cleanProjectResult : undefined
+      projectResult: type === 'project' ? cleanProjectResult : undefined,
+      designAuditResult: type === 'design_audit' ? cleanDesignAuditResult : undefined
     };
 
     setWorkflowHistory((prev) => {

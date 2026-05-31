@@ -2,6 +2,17 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.06] - 2026-05-31
+
+### Added Design Audit Mode using the Design Principles Appendix (Phase 13)
+- Designed and built **Design Audit Mode** allowing users to review and score UI ideas, visual styles, current issues, target devices, and CSS specifications against strict design and accessibility rules.
+- Implemented the `POST /api/design-audit` Express backend route in `server.ts` executing comprehensive UI reviews against 17 core design/accessibility guidelines and returning structured audits.
+- Programmed an interactive visual design audit workspace featuring gold-accent circular score meters, multi-dimensional ratings progress bars, severities badges, and checklists.
+- Added a fourth tab selection button "Design Audit Mode" in the main right panel selector in `src/App.tsx`.
+- Instantiated the `useDesignAudit` custom client hook managing inputs, loading states, and history preservation wrappers.
+- Automatically preserved complete Design Audit cycles, scores, and states inside the LocalStorage sidebar runs list.
+- Incremented footer version description and `package.json` to version `v0.06`.
+
 ## [0.05] - 2026-05-31
 
 ### Added Iterative Project Mode & Optimization Planner (Phase 12)

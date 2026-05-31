@@ -580,6 +580,193 @@ Conform to these rules:
     }
   });
 
+  // Design Audit Mode endpoint
+  app.post("/api/design-audit", async (req, res) => {
+    try {
+      const { projectName, uiDescription, currentIssues, targetDevice, stylePreference, designNotes, projectContext, mode, settings } = req.body;
+
+      // 1. Mock Mode Generator Fallback
+      if (mode === "mock") {
+        try {
+          const mockAudit = {
+            ok: true,
+            projectName: projectName || "My Application UI",
+            title: `Design Audit: ${projectName || "My Application UI"}`,
+            summary: `A systematic design principles assessment for "${projectName || "My Application"}". Evaluates visual hierarchy, layout spacing grids, component states, and accessibility focus lines.`,
+            overall_score: 7.2,
+            scores: {
+              layout: 8,
+              visual_hierarchy: 7,
+              accessibility: 6,
+              mobile_usability: 8,
+              interaction_feedback: 6,
+              performance_feel: 8,
+              design_consistency: 7
+            },
+            strengths: [
+              "Foundational UI structure is clean and separates controls from outputs effectively.",
+              "Responsive grid design scales smoothly between single-column and dense dashboards."
+            ],
+            issues: [
+              {
+                id: "iss_1",
+                severity: "high",
+                category: "accessibility",
+                problem: "Interactive elements lack outline focus rings; keyboard path indicator states are fully missing.",
+                why_it_matters: "Violates WCAG AA requirements. Keyboard-only and assistive technology users cannot navigate or locate focus controls.",
+                recommended_fix: "Define clear :focus-visible rules using our gold accent: \`outline: 2px solid hsl(38, 92%, 50%); outline-offset: 2px;\`"
+              },
+              {
+                id: "iss_2",
+                severity: "medium",
+                category: "layout",
+                problem: "Grid margins use ad-hoc pixel definitions instead of cohesive 8pt spacing tokens.",
+                why_it_matters: "Causes design inconsistencies and layout shifts on varying monitor widths.",
+                recommended_fix: "Standardize spacing variables to multiples of 8px (e.g. \`gap: 2rem; padding: 1.5rem;\` for container cards)."
+              },
+              {
+                id: "iss_3",
+                severity: "low",
+                category: "motion",
+                problem: "State transitions lack prefers-reduced-motion media query gates.",
+                why_it_matters: "Animations may cause discomfort or vestibular issues for sensitive users.",
+                recommended_fix: "Wrap custom CSS transitions in a prefers-reduced-motion media query to bypass animations when requested by OS."
+              }
+            ],
+            quick_wins: [
+              "Apply high-contrast gold focus rings to inputs and tabs.",
+              "Disable layout transitions when prefers-reduced-motion is active."
+            ],
+            deeper_improvements: [
+              "Establish tokenized HSL CSS variables for backgrounds, borders, and accents to guarantee consistency.",
+              "Refactor component states (disabled, loading, error, empty) to render unified visual frames."
+            ],
+            implementation_prompt: `Review and refactor \`src/index.css\` and component files in \`src/components/\` to implement strict HSL focus-visible outlines (\`outline: 2px solid hsl(38, 92%, 50%)\` with 2px offset) and prefers-reduced-motion overrides. Do NOT modify backend code.`,
+            targetDevice: targetDevice || "both",
+            stylePreference: stylePreference || "Sleek Charcoal"
+          };
+
+          return res.json(mockAudit);
+        } catch (mockErr: any) {
+          return res.status(500).json({ ok: false, error: mockErr.message || "Failed generating mock design review." });
+        }
+      }
+
+      // 2. Real Gemini Mode Router
+      const { ai: activeClient, error: clientSetupError } = getGeminiClient(settings);
+      if (clientSetupError || !activeClient) {
+        return res.status(401).json({
+          ok: false,
+          error: clientSetupError || "Gemini Client could not be constructed."
+        });
+      }
+
+      // Assemble design review contents
+      let userPrompt = `Perform a systematic Design Audit & Accessibility review for the following project:\n\n`;
+      userPrompt += `### PROJECT NAME: "${projectName || "Untitled UI Project"}"\n`;
+      userPrompt += `### TARGET DEVICE: "${targetDevice || "both"}"\n`;
+      if (stylePreference) userPrompt += `### VISUAL STYLE PREFERENCE: "${stylePreference}"\n`;
+      userPrompt += `### UI ARCHITECTURE DESCRIPTION:\n${uiDescription || "None provided"}\n\n`;
+      if (currentIssues) userPrompt += `### CURRENT ISSUES & BOTTLENECKS:\n${currentIssues}\n\n`;
+      if (designNotes) userPrompt += `### PASTED CSS & DESIGN SPECIFICATION NOTES:\n${designNotes}\n\n`;
+      if (projectContext) userPrompt += `### EXTRA REFERENCE PROJECT CONTEXT:\n${projectContext}\n\n`;
+      userPrompt += `Evaluate against simplicity, cohesive tokens, WCAG AA, responsive strategies, motion, and interaction feedback states. Return the requested JSON schema.`;
+
+      const designAuditSchema = {
+        type: "OBJECT",
+        required: ["ok", "title", "summary", "overall_score", "scores", "strengths", "issues", "quick_wins", "deeper_improvements", "implementation_prompt"],
+        properties: {
+          ok: { type: "BOOLEAN" },
+          title: { type: "STRING" },
+          summary: { type: "STRING" },
+          overall_score: { type: "NUMBER" },
+          scores: {
+            type: "OBJECT",
+            required: ["layout", "visual_hierarchy", "accessibility", "mobile_usability", "interaction_feedback", "performance_feel", "design_consistency"],
+            properties: {
+              layout: { type: "NUMBER" },
+              visual_hierarchy: { type: "NUMBER" },
+              accessibility: { type: "NUMBER" },
+              mobile_usability: { type: "NUMBER" },
+              interaction_feedback: { type: "NUMBER" },
+              performance_feel: { type: "NUMBER" },
+              design_consistency: { type: "NUMBER" }
+            }
+          },
+          strengths: { type: "ARRAY", items: { type: "STRING" } },
+          issues: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              required: ["id", "severity", "category", "problem", "why_it_matters", "recommended_fix"],
+              properties: {
+                id: { type: "STRING" },
+                severity: { type: "STRING" },
+                category: { type: "STRING" },
+                problem: { type: "STRING" },
+                why_it_matters: { type: "STRING" },
+                recommended_fix: { type: "STRING" }
+              }
+            }
+          },
+          quick_wins: { type: "ARRAY", items: { type: "STRING" } },
+          deeper_improvements: { type: "ARRAY", items: { type: "STRING" } },
+          implementation_prompt: { type: "STRING" }
+        }
+      };
+
+      const systemInstruction = `You are a Lead Design System Architect and UX Specialist.
+Your task is to evaluate the user's UI layout description, current issues, target devices, visual preferences, and design context against these strict Design Principles:
+- Simplicity through reduction
+- Material honesty & Obsessive detail
+- Coherent tokenized design language (HSL colors, type, 8pt spacing systems)
+- Context-driven layout & Mobile-first structures
+- Accessibility by default (WCAG AA contrast, keyboard paths, :focus-visible states, reduced-motion queries)
+- Performance feel & Rapid feedback loops
+- Cohesive interactive component states
+
+Reason privately and step-by-step. Do not output any thinking or brainstorming tags (like <thinking>, <analysis>, or hidden CoT tags).
+Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.`;
+
+      try {
+        const chosenModel = settings?.model || "gemini-3.5-flash";
+        const response = await activeClient.models.generateContent({
+          model: chosenModel,
+          contents: userPrompt,
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: designAuditSchema,
+            temperature: typeof settings?.temperature === 'number' ? settings.temperature : 0.2,
+          }
+        });
+
+        const textOutput = response.text || "";
+        if (!textOutput.trim()) {
+          throw new Error("Received an empty response from Gemini during design review.");
+        }
+
+        const parsed = JSON.parse(textOutput);
+        parsed.targetDevice = targetDevice || "both";
+        parsed.stylePreference = stylePreference || "Cohesive HSL Accent";
+
+        return res.json(parsed);
+
+      } catch (geminiError: any) {
+        console.error("Gemini Design Audit failed:", geminiError);
+        const classified = handleProviderError(geminiError);
+        return res.status(classified.status).json({
+          ok: false,
+          error: recursiveSanitize(classified.message)
+        });
+      }
+
+    } catch (routeErr: any) {
+      console.error("Endpoint execution error in /api/design-audit:", routeErr);
+      return res.status(500).json({ ok: false, error: "An unexpected system error occurred on the development server." });
+    }
+  });
+
   // Main prompt refinement endpoint
   app.post("/api/refine", async (req, res) => {
     try {

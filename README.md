@@ -4,11 +4,12 @@
 
 # Prompt Refinery
 
-**Version:** 0.05  
+**Version:** 0.06  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
 
 
 ## Features
+- **Design Audit Mode (NEW)**: Evaluates UI layouts, visual style preferences, current issues, target devices, and pasted CSS against 17 core design and accessibility guidelines (WCAG AA contrast, HSL grids, prefers-reduced-motion queries). Returns overall scores, 7 detailed rating dimensions, positive strengths, categorized issue cards with severities, quick wins checkboxes, and copy-paste-ready master prompts.
 - **Iterative Project Mode**: Contextual codebase optimizer accepting project names, GitHub URLs, text notes, and text/markdown/json files (<200KB) to suggest improvements, identify risks, and construct copy-paste phase prompts with quick New-Prompt and Refinery-Pipeline triggers.
 - **Multi-Stage Refinery Pipeline**: An advanced planning workspace that progressively refines rough ideas through four progressive phases: Project Request Spec → Technical Spec → Implementation Plan → Final Vibe Prompt, featuring timeline unlocks, step copying, and bulk document exporting.
 
@@ -19,7 +20,8 @@ Run and compile raw ideas into precision-crafted prompt blueprint stacks for cod
    - [Multi-Stage Refinery Pipeline](#1-multi-stage-refinery-pipeline-new)
    - [Creative Spark Catalyst](#2-creative-spark-catalyst)
    - [Quick Blueprint Mode & Refinement Loop](#3-quick-blueprint-mode--refinement-loop)
-   - [Engine Settings & Security Diagnostics](#4-engine-settings--security-diagnostics)
+   - [Design Audit Mode](#4-design-audit-mode-new)
+   - [Engine Settings & Security Diagnostics](#5-engine-settings--security-diagnostics)
 2. [The Prompt Recipe Library (Deep Dive)](#-the-prompt-recipe-library-deep-dive)
    - [Quick Blueprint (`blueprint`)](#1-quick-blueprint-blueprint)
    - [Idea Refinement (`idea_refinement`)](#2-idea-refinement-idea_refinement)
@@ -68,7 +70,27 @@ The standard pre-compilation flow that translates a raw prompt into a unified JS
 
 ---
 
-### 4. Engine Settings & Security Diagnostics
+### 4. Design Audit Mode (NEW)
+**Design Audit Mode** provides a comprehensive visual and technical design evaluation workstation. It assesses frontend layouts against modern web aesthetics, accessibility compliance, and UX patterns.
+
+- **Audited Metrics (The 7 Dimensions)**:
+  1. **Layout & Spacing**: Evaluating alignment, padding density, and 8pt grids.
+  2. **Visual Hierarchy**: Size contrast, weight distribution, and readability scan-paths.
+  3. **Accessibility & Contrast**: WCAG AA standards, color-blindness support, and keyboard outline indicators.
+  4. **Mobile Usability**: Fluid widths, finger-tap sizes (>44px), and viewport media query breakpoints.
+  5. **Interaction Feedback**: Hover outlines, active clicks, and transitions.
+  6. **Performance Feel**: Load speed, CSS layout optimization, and skeleton placeholders.
+  7. **Design Consistency**: HSL golden tokens, shared charcoal palettes, and reusable elements.
+- **Visual Dashboard**:
+  - **Circular Score Gauge**: A concentric, rotating overall rating circle (out of 10) signaling UX health.
+  - **Metric Sub-Grids**: Progress meters detailing score ratings from 1 to 10.
+  - **Collapsible Checklist Cards**: Separates reviews into strengths, quick wins, and deeper systemic upgrades.
+  - **Identified Design Issues**: Dynamic cards displaying severity badges (low, medium, high), category tags, problem breakdowns, and code-based recommended fixes.
+  - **Master Handoff Prompt**: Automatically generates a robust implementation instruction optimized for Cursor or Antigravity to code out the requested UI improvements.
+
+---
+
+### 5. Engine Settings & Security Diagnostics
 Configures model attributes while maintaining the highest standard of data safety.
 
 - **Custom Settings Modal**: Select active models (e.g., `gemini-3.5-flash`), adjust temperature curves, configure output limits, toggle strict response schemas, and enter private API keys (BYOK mode).
@@ -129,11 +151,22 @@ Prompt Refinery features a modular registry of pre-compiler recipes. Each recipe
 ---
 
 ### 6. Design Principles / Audit (`design_audit`)
-* **What it is**: Assesses layouts against spacing tokens, cohesive HSL amber/gold color palettes, WCAG contrast compliance, responsive grids, micro-animations, and component state charts.
-* **When to use**: When you want to audit your frontend layouts to ensure they look premium, responsive, and beautifully alive.
-* **Use Case Example**: Polishing a dashboard design to eliminate plain raw CSS layouts.
-  * **Input**: *"improve my dashboard visual layout"*
-  * **Output**: A visual guidelines checklist detailing specific CSS glassmorphism styles (`backdrop-filter`), cohesive charcoal gradients, amber transitions, and accessibility contrast standards.
+* **What it is**: Evaluates UI layout plans against 17 core design and accessibility guidelines, covering 8px spacing units, tokenized HSL scales, WCAG AA contrast standards, prefers-reduced-motion queries, focus ring outlines, mobile-first breakpoints, and interactive state models.
+* **When to use**: When you want to review textual layout mockups, Visual preferences, CSS notes, or app specifications for visual premiumness, responsive fluid layout, and high accessibility compliance before coding.
+* **Use Case Example**: Redesigning a cluttered database list console to look like a high-end, responsive dashboard.
+  * **Input**: 
+    * **Project Name**: *CloudMetrics Console*
+    * **UI Description**: *A grid table showing virtual server lists. It has light-gray card borders, thin small black text on a white background, and standard browser checkboxes with no icons.*
+    * **Issues**: *Looks cluttered and boring; hard to read text; zero active states or animations; layout breaks on tablets.*
+    * **Target Device**: *Desktop & Mobile*
+    * **Visual Style**: *Sleek charcoal glassmorphism with golden accents*
+  * **Output**: A comprehensive visual design audit plan detailing:
+    * **Overall score**: *4.8 / 10*
+    * **7 rated metrics**: Spacing (3), Hierarchy (5), Accessibility (4), Mobile (4), Interaction (3), Performance (8), Consistency (5).
+    * **Visual Strengths**: *Solid backend response speed; clear server metadata fields.*
+    * **Quick UX Wins checklist**: *Implement outline focus rings (`focus-visible:ring-2`); replace table borders with subtle divider borders; apply `Google Font Outfit` for distinct headings.*
+    * **Systemic improvements**: *Build fluid media-query flex containers to replace strict grid columns; define local custom CSS variables for cohesive HSL tokens.*
+    * **Master Agent Prompt**: A copy-paste-ready instruction to build out the sleek charcoal glassmorphism interface on client browsers.
 
 ---
 

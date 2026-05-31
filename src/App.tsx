@@ -12,6 +12,7 @@ import { useWorkflowHistory } from './hooks/useWorkflowHistory';
 import { useBlueprintGeneration } from './hooks/useBlueprintGeneration';
 import { usePipelineWorkflow } from './hooks/usePipelineWorkflow';
 import { useProjectIterative } from './hooks/useProjectIterative';
+import { useDesignAudit } from './hooks/useDesignAudit';
 import { copyToClipboardSafe } from './lib/clipboard';
 import { detectAndParseImport } from './lib/json';
 import { downloadJSON, downloadMarkdown } from './lib/exporters';
@@ -28,6 +29,8 @@ import { PipelineWorkspace } from './components/PipelineWorkspace';
 import { ProjectWorkspace } from './components/ProjectWorkspace';
 import { ProjectInputPanel } from './components/ProjectInputPanel';
 import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
+import { DesignAuditInputPanel } from './components/DesignAuditInputPanel';
+import { DesignAuditWorkspace } from './components/DesignAuditWorkspace';
 import { SparkIdea } from './types';
 
 export default function App() {
@@ -91,8 +94,8 @@ export default function App() {
     clearAllWorkflowHistory
   } = useWorkflowHistory(showToast);
 
-  // Workflow mode selector: blueprint vs pipeline vs project
-  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline' | 'project'>('blueprint');
+  // Workflow mode selector: blueprint vs pipeline vs project vs design_audit
+  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline' | 'project' | 'design_audit'>('blueprint');
 
   // Wrapper for saving to workflow runs history
   const handleSaveToWorkflowHistory = (
@@ -239,9 +242,66 @@ export default function App() {
     }
   });
 
+  // Design Audit Hook
+  const {
+    projectName: auditProjectName,
+    setProjectName: setAuditProjectName,
+    uiDescription,
+    setUiDescription,
+    currentIssues: auditCurrentIssues,
+    setCurrentIssues: setAuditCurrentIssues,
+    targetDevice,
+    setTargetDevice,
+    stylePreference,
+    setStylePreference,
+    designNotes,
+    setDesignNotes,
+    isGeneratingAudit,
+    auditResult,
+    setAuditResult,
+    auditError,
+    setAuditError,
+    clearAudit,
+    loadAuditResult,
+    analyzeDesign
+  } = useDesignAudit({
+    showToast,
+    saveToWorkflowHistory: (prompt, context, history, bpOrResult, mode, activeTab, recipeId, sparkTitle, sparkNovelty, sparkTags, type, pipeline, projectResult, designAuditResult) => {
+      const matchesSpark = activeSpark && prompt === activeSpark.rawPrompt;
+      saveToWorkflowHistory(
+        prompt,
+        context,
+        history,
+        bpOrResult,
+        mode,
+        activeTab,
+        recipeId,
+        matchesSpark ? activeSpark.title : undefined,
+        matchesSpark ? activeSpark.novelty : undefined,
+        matchesSpark ? activeSpark.tags : undefined,
+        type,
+        pipeline,
+        projectResult,
+        designAuditResult
+      );
+    }
+  });
+
   const handleProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     analyzeProject(generationMode, {
+      model,
+      temperature,
+      maxOutputTokens,
+      strictMode,
+      browserApiKey,
+      debugMode
+    });
+  };
+
+  const handleDesignSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    analyzeDesign(generationMode, {
       model,
       temperature,
       maxOutputTokens,
@@ -471,16 +531,26 @@ export default function App() {
       setBlueprint(null);
       setRecipeResult(null);
       clearPipeline();
+      clearAudit();
     } else if (item.type === 'pipeline' && item.pipeline) {
       setWorkflowMode('pipeline');
       loadPipeline(item.pipeline);
       setBlueprint(null);
       setRecipeResult(null);
       clearProject();
+      clearAudit();
+    } else if (item.type === 'design_audit' && item.designAuditResult) {
+      setWorkflowMode('design_audit');
+      loadAuditResult(item.designAuditResult, item.rawPrompt, item.projectContext);
+      setBlueprint(null);
+      setRecipeResult(null);
+      clearPipeline();
+      clearProject();
     } else {
       setWorkflowMode('blueprint');
       clearPipeline();
       clearProject();
+      clearAudit();
       setBlueprint(item.blueprint || null);
       setRecipeResult(item.recipeResult || null);
       setSelectedRecipeId((item.recipeId as any) || 'blueprint');
@@ -506,6 +576,7 @@ export default function App() {
     setRejectionStates({});
     clearPipeline();
     clearProject();
+    clearAudit();
     showToast('Controls cleared.');
   };
 
@@ -632,6 +703,27 @@ export default function App() {
             onSubmit={handleProjectSubmit}
             showToast={showToast}
           />
+        ) : workflowMode === 'design_audit' ? (
+          <DesignAuditInputPanel
+            projectName={auditProjectName}
+            setProjectName={setAuditProjectName}
+            uiDescription={uiDescription}
+            setUiDescription={setUiDescription}
+            currentIssues={auditCurrentIssues}
+            setCurrentIssues={setAuditCurrentIssues}
+            targetDevice={targetDevice}
+            setTargetDevice={setTargetDevice}
+            stylePreference={stylePreference}
+            setStylePreference={setStylePreference}
+            designNotes={designNotes}
+            setDesignNotes={setDesignNotes}
+            isGeneratingAudit={isGeneratingAudit}
+            generationMode={generationMode}
+            setGenerationMode={setGenerationMode}
+            onClear={handleClear}
+            onSubmit={handleDesignSubmit}
+            showToast={showToast}
+          />
         ) : (
           <InputPanel
             rawPrompt={rawPrompt}
@@ -694,6 +786,17 @@ export default function App() {
             >
               🔍 Iterative Project Mode
             </button>
+            <button
+              type="button"
+              onClick={() => setWorkflowMode('design_audit')}
+              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                workflowMode === 'design_audit'
+                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+              }`}
+            >
+              📐 Design Audit Mode
+            </button>
           </div>
 
           <div className="flex-1 bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl flex flex-col overflow-hidden min-h-[500px] shadow-2xl">
@@ -719,6 +822,14 @@ export default function App() {
                 projectContext={projectContext}
                 conversationHistory={historyRows}
                 generationMode={generationMode}
+                showToast={showToast}
+              />
+            ) : workflowMode === 'design_audit' ? (
+              <DesignAuditWorkspace
+                result={auditResult}
+                isGeneratingAudit={isGeneratingAudit}
+                auditError={auditError}
+                onCopy={handleCopy}
                 showToast={showToast}
               />
             ) : (
@@ -825,7 +936,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v0.05 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v0.06 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>
