@@ -27,8 +27,11 @@ interface UsePipelineWorkflowProps {
     sparkTitle?: string,
     sparkNovelty?: 'practical' | 'unusual' | 'black-swan',
     sparkTags?: string[],
-    type?: 'blueprint' | 'pipeline',
-    pipeline?: any
+    type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit',
+    pipeline?: any,
+    projectResult?: any,
+    designAuditResult?: any,
+    refinementProfile?: string
   ) => void;
 }
 
@@ -147,7 +150,8 @@ export function usePipelineWorkflow({
     stageKey: StageKey,
     rawPrompt: string,
     baseContext: string,
-    historyRows: ConversationHistoryRow[]
+    historyRows: ConversationHistoryRow[],
+    refinementProfile: string
   ) => {
     if (!rawPrompt.trim()) {
       showToast('Please enter a raw prompt first.');
@@ -209,6 +213,7 @@ export function usePipelineWorkflow({
           conversationHistory: historyRows,
           mode: generationMode,
           recipeId,
+          refinementProfile,
           settings: {
             model,
             temperature: stageKey === 'finalVibePrompt' ? 0.3 : temperature,
@@ -255,7 +260,10 @@ export function usePipelineWorkflow({
             undefined,
             undefined,
             'pipeline',
-            updatedPipeline
+            updatedPipeline,
+            undefined,
+            undefined,
+            refinementProfile
           );
 
           return updatedPipeline;

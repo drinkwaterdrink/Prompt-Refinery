@@ -20,5 +20,5 @@ export interface PromptRecipe {
   outputKind: 'blueprint' | 'markdown' | 'json';
   systemInstruction: string;
   userPayloadBuilder: (rawPrompt: string, projectContext?: string, conversationHistory?: any[]) => string;
-  mockGenerator: (rawPrompt: string, projectContext?: string) => any;
+  mockGenerator: (rawPrompt: string, projectContext?: string, refinementProfile?: string) => any;
 }

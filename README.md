@@ -4,12 +4,13 @@
 
 # Prompt Refinery
 
-**Version:** 0.06  
+**Version:** 0.07  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
 
 
 ## Features
-- **Design Audit Mode (NEW)**: Evaluates UI layouts, visual style preferences, current issues, target devices, and pasted CSS against 17 core design and accessibility guidelines (WCAG AA contrast, HSL grids, prefers-reduced-motion queries). Returns overall scores, 7 detailed rating dimensions, positive strengths, categorized issue cards with severities, quick wins checkboxes, and copy-paste-ready master prompts.
+- **Prompt Quality Profiles (NEW)**: Introduces 8 selectable refinement focuses (Balanced, Senior Engineer, UI/UX Designer, Product Strategist, Bugfix/Debug, Refactor/Optimization, PWA/Mobile, Black-Swan Creative) that dynamically tune Gemini system instructions and offline mocks to shape specifications for specific target agents.
+- **Design Audit Mode**: Evaluates UI layouts, visual style preferences, current issues, target devices, and pasted CSS against 17 core design and accessibility guidelines (WCAG AA contrast, HSL grids, prefers-reduced-motion queries). Returns overall scores, 7 detailed rating dimensions, positive strengths, categorized issue cards with severities, quick wins checkboxes, and copy-paste-ready master prompts.
 - **Iterative Project Mode**: Contextual codebase optimizer accepting project names, GitHub URLs, text notes, and text/markdown/json files (<200KB) to suggest improvements, identify risks, and construct copy-paste phase prompts with quick New-Prompt and Refinery-Pipeline triggers.
 - **Multi-Stage Refinery Pipeline**: An advanced planning workspace that progressively refines rough ideas through four progressive phases: Project Request Spec → Technical Spec → Implementation Plan → Final Vibe Prompt, featuring timeline unlocks, step copying, and bulk document exporting.
 
@@ -17,11 +18,12 @@ Run and compile raw ideas into precision-crafted prompt blueprint stacks for cod
 
 ## 📖 Table of Contents
 1. [Core Features Walkthrough](#-core-features-walkthrough)
-   - [Multi-Stage Refinery Pipeline](#1-multi-stage-refinery-pipeline-new)
-   - [Creative Spark Catalyst](#2-creative-spark-catalyst)
-   - [Quick Blueprint Mode & Refinement Loop](#3-quick-blueprint-mode--refinement-loop)
-   - [Design Audit Mode](#4-design-audit-mode-new)
-   - [Engine Settings & Security Diagnostics](#5-engine-settings--security-diagnostics)
+   - [Prompt Quality Profiles](#1-prompt-quality-profiles-new)
+   - [Multi-Stage Refinery Pipeline](#2-multi-stage-refinery-pipeline)
+   - [Creative Spark Catalyst](#3-creative-spark-catalyst)
+   - [Quick Blueprint Mode & Refinement Loop](#4-quick-blueprint-mode--refinement-loop)
+   - [Design Audit Mode](#5-design-audit-mode)
+   - [Engine Settings & Security Diagnostics](#6-engine-settings--security-diagnostics)
 2. [The Prompt Recipe Library (Deep Dive)](#-the-prompt-recipe-library-deep-dive)
    - [Quick Blueprint (`blueprint`)](#1-quick-blueprint-blueprint)
    - [Idea Refinement (`idea_refinement`)](#2-idea-refinement-idea_refinement)
@@ -38,7 +40,25 @@ Run and compile raw ideas into precision-crafted prompt blueprint stacks for cod
 
 ## 🚀 Core Features Walkthrough
 
-### 1. Multi-Stage Refinery Pipeline (NEW)
+### 1. Prompt Quality Profiles (NEW)
+Sometimes a concise, practical prompt is needed; other times, a deep, security-heavy spec or a highly interactive UI roadmap is required. **Prompt Quality Profiles** modify how prompt recipes and workflows generate their outputs (New Prompt Mode, Refinery Pipeline, Iterative Project Mode, and Design Audit Mode) depending on the engineering or product focus, without modifying baseline JSON schemas.
+
+A global select dropdown is placed directly next to the **Workflow Mode selector tabs** inside the main right preview panel. Hovering over the dropdown displays a detailed CSS tooltip explaining the focus guidelines and system instructions of the active profile:
+
+1. **Balanced** (Default): High-quality pre-compilation review. Ensures a solid mix of functional specs, target audience mapping, standard layouts, and security/reliability patterns.
+2. **Senior Engineer**: Optimized for coding agents (Cursor, Antigravity). Emphasizes small, safe, incremental edits, files to inspect, technical risks, clear and testable acceptance criteria, and strictly warns against unnecessary rewrites.
+3. **UI/UX Designer**: Focuses on screen layout systems, smooth transition animations, micro-interactions, stateful styling, WCAG accessibility outlines, mobile touch-targets (>44px), and clear visual hierarchy.
+4. **Product Strategist**: Focuses on defining atomic MVP scopes, ordering backlog priorities, planning customer onboarding flows, and listing business value retention metrics.
+5. **Bugfix / Debug**: Emphasizes strict reproduction steps, suspected root causes, surgical minimal patches, diagnostics telemetry logging, and comprehensive regression prevention.
+6. **Refactor / Optimization**: Focuses on performance benchmarks, db query speeds, code maintainability indexes, atomic cleanup stages, and modular refactoring steps.
+7. **PWA / Mobile**: Focuses on offline cache service workers, LocalStorage offline data structures, fluid layouts, finger-friendly hit targets, viewport scaling, and lightweight mobile rendering.
+8. **Black-Swan Creative**: Focuses on maximum product novelty, gamified defensive mechanics, unconventional constraints, and first-principles creative pivots to incubation.
+
+The active profile is automatically synced to the LocalStorage sidebar runs list, restored when clicking past runs, and embedded inside exported JSON blueprints, Markdown files, Vibe coding packets, and timeline pipelines!
+
+---
+
+### 2. Multi-Stage Refinery Pipeline
 The **Refinery Pipeline** is a premium sequential planning workstation. It transforms raw prompts progressively through four evolutionary stages, ensuring that by the time you start coding, every structural detail has been thoroughly mapped out.
 
 - **The Flow**: Stage 1 (Project Request Spec) $\rightarrow$ Stage 2 (Technical Spec) $\rightarrow$ Stage 3 (Implementation Plan) $\rightarrow$ Stage 4 (Final Vibe Prompt).
@@ -49,7 +69,7 @@ The **Refinery Pipeline** is a premium sequential planning workstation. It trans
 
 ---
 
-### 2. Creative Spark Catalyst
+### 3. Creative Spark Catalyst
 Designed for "vibe coding" sessions where you want to start a fresh project but need a high-novelty, buildable software concept.
 
 - **Generation Modes**: 
@@ -61,7 +81,7 @@ Designed for "vibe coding" sessions where you want to start a fresh project but 
 
 ---
 
-### 3. Quick Blueprint Mode & Refinement Loop
+### 4. Quick Blueprint Mode & Refinement Loop
 The standard pre-compilation flow that translates a raw prompt into a unified JSON blueprint containing problem definitions, architectural layouts, and UX component structures.
 
 - **Unified Schema Dashboard**: Organizes outputs into tabbed panels detailing Overview, Requirements, Architecture, UX, Reliability, Final Prompt, and raw JSON code.
@@ -70,7 +90,7 @@ The standard pre-compilation flow that translates a raw prompt into a unified JS
 
 ---
 
-### 4. Design Audit Mode (NEW)
+### 5. Design Audit Mode
 **Design Audit Mode** provides a comprehensive visual and technical design evaluation workstation. It assesses frontend layouts against modern web aesthetics, accessibility compliance, and UX patterns.
 
 - **Audited Metrics (The 7 Dimensions)**:
@@ -90,7 +110,7 @@ The standard pre-compilation flow that translates a raw prompt into a unified JS
 
 ---
 
-### 5. Engine Settings & Security Diagnostics
+### 6. Engine Settings & Security Diagnostics
 Configures model attributes while maintaining the highest standard of data safety.
 
 - **Custom Settings Modal**: Select active models (e.g., `gemini-3.5-flash`), adjust temperature curves, configure output limits, toggle strict response schemas, and enter private API keys (BYOK mode).

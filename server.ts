@@ -14,6 +14,7 @@ import { ENHANCER_SYSTEM_PROMPT, BLUEPRINT_OUTPUT_CONTRACT } from "./src/lib/pro
 import { recursiveSanitize } from "./src/lib/sanitize";
 import { getRecipeById, isValidRecipeId } from "./src/lib/promptRecipes/registry";
 import { generateLocalSparks } from "./src/lib/sparksMockGenerator";
+import { getProfileById } from "./src/lib/promptProfiles";
 
 dotenv.config();
 
@@ -251,7 +252,7 @@ async function startServer() {
 
   // Creative Spark Catalyst endpoint
   app.post("/api/sparks", async (req, res) => {
-    const { count, novelty, category, mood, mode, settings } = req.body;
+    const { count, novelty, category, mood, mode, settings, refinementProfile } = req.body;
     const sparkCount = typeof count === 'number' ? count : 3;
     const sparkNovelty = (novelty === 'practical' || novelty === 'unusual' || novelty === 'black-swan') ? novelty : 'practical';
 
@@ -284,12 +285,17 @@ Novelty Tier requested: "${sparkNovelty}".
     if (category) userPromptContent += `Target Category/Domain: "${category}".\n`;
     if (mood) userPromptContent += `Target Mood/Aesthetic: "${mood}".\n`;
 
+    const recipeProfile = getProfileById(refinementProfile || "balanced");
     const sparksSystemInstruction = `You are a legendary startup incubator general partner and technology foresight researcher. Your task is to generate fresh app or feature ideas for vibe coding.
 Avoid generic todo apps or obvious concepts. Create high-quality, fully buildable concepts.
 For the requested novelty level ("practical", "unusual", "black-swan"), conform to these strict architectural criteria:
 - Practical: Focus on high-utility personal utilities, local grow room tracking, offline-first personal tracking tools, or developer utilities.
 - Unusual: Focus on niche tools, retro-inspired mechanics, world-building lore books, roleplay relationship nodes, or Web Audio oscillators.
 - Black-Swan: Fuse 2-3 unrelated technical pillars, identify a catalyst problem, add an unconventional constraint (e.g. deliberate friction, zero-UI, hyper-local/analog, ephemeral, ambient, voice-first), and produce a buildable but paradigm-shifting MVP loop. Ensure catalystProblem, corePillars, and whyNow are fully populated.
+
+### ACTIVE GENERATION STYLE / PROFILE DIRECTION (CRITICAL):
+${recipeProfile.instructionBlock}
+Ensure the generated sparks, prompts, contexts, and tags are heavily inspired and customized to match this profile's mindset.
 
 You must reason privately. Output valid JSON only, matching the requested schema. Generate NO other text.`;
 
@@ -374,17 +380,18 @@ You must reason privately. Output valid JSON only, matching the requested schema
   // Iterative Project Ideas Mode endpoint
   app.post("/api/project-ideas", async (req, res) => {
     try {
-      const { projectName, repoUrl, projectContext, uploadedContextText, direction, mode, settings } = req.body;
+      const { projectName, repoUrl, projectContext, uploadedContextText, direction, mode, settings, refinementProfile } = req.body;
 
       // 1. Mock Mode Generator Fallback
       if (mode === "mock") {
         try {
+          const profile = refinementProfile || "balanced";
           const mockResponse = {
             ok: true,
             projectName: projectName || "My Copied Application",
             repoUrl: repoUrl || "",
-            project_summary: `A React + TypeScript application focused on "${projectName || "Developer Productivity"}". It uses modern grid systems, modular hooks, and custom dark HSL aesthetics.`,
-            detected_app_type: "React Single Page Application (Vite + TSX)",
+            project_summary: `A React + TypeScript application focused on "${projectName || "Developer Productivity"}". Focus profile: ${profile.toUpperCase()}. It uses modern grid systems, modular hooks, and custom dark HSL aesthetics.`,
+            detected_app_type: `React Single Page Application (Profile: ${profile.replace(/_/g, ' ')})`,
             known_context_used: ["README.md", "package.json", "Uploaded Notes"],
             assumptions: [
               "Application utilizes LocalStorage or SessionStorage for state caching between reloads.",
@@ -527,6 +534,7 @@ You must reason privately. Output valid JSON only, matching the requested schema
         }
       };
 
+      const recipeProfile = getProfileById(refinementProfile || "balanced");
       const systemInstruction = `You are a Principal Product Engineer and Code Review Specialist.
 Your task is to analyze the provided project metadata (name, code context, goals, and direction) using the Code Review & Optimization Plan framework.
 Identify the application type, summarize the project, and outline concrete strengths, key assumptions, and risks/gaps.
@@ -536,7 +544,11 @@ Conform to these rules:
 2. Recommend small, atomic milestones rather than broad code overhauls.
 3. For each improvement, provide a copy-paste-ready "phase_prompt" that directs a secondary coding agent (like Antigravity) to implement that specific step with precise instructions and target file scopes.
 4. Reason privately and step-by-step. Do not output any thinking or brain-storming tags (like <thinking>, <analysis>, or hidden CoT tags).
-5. Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.`;
+5. Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.
+
+### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):
+${recipeProfile.instructionBlock}
+Ensure the strengths, risks, suggestions, phase prompts, and next phase plans generated align closely with this style's priorities.`;
 
       try {
         const chosenModel = settings?.model || "gemini-3.5-flash";
@@ -583,7 +595,7 @@ Conform to these rules:
   // Design Audit Mode endpoint
   app.post("/api/design-audit", async (req, res) => {
     try {
-      const { projectName, uiDescription, currentIssues, targetDevice, stylePreference, designNotes, projectContext, mode, settings } = req.body;
+      const { projectName, uiDescription, currentIssues, targetDevice, stylePreference, designNotes, projectContext, mode, settings, refinementProfile } = req.body;
 
       // 1. Mock Mode Generator Fallback
       if (mode === "mock") {
@@ -592,7 +604,7 @@ Conform to these rules:
             ok: true,
             projectName: projectName || "My Application UI",
             title: `Design Audit: ${projectName || "My Application UI"}`,
-            summary: `A systematic design principles assessment for "${projectName || "My Application"}". Evaluates visual hierarchy, layout spacing grids, component states, and accessibility focus lines.`,
+            summary: `A systematic design principles assessment for "${projectName || "My Application"}". Focus profile: ${refinementProfile || "balanced"}. Evaluates visual hierarchy, layout spacing grids, component states, and accessibility focus lines.`,
             overall_score: 7.2,
             scores: {
               layout: 8,
@@ -715,6 +727,7 @@ Conform to these rules:
         }
       };
 
+      const recipeProfile = getProfileById(refinementProfile || "balanced");
       const systemInstruction = `You are a Lead Design System Architect and UX Specialist.
 Your task is to evaluate the user's UI layout description, current issues, target devices, visual preferences, and design context against these strict Design Principles:
 - Simplicity through reduction
@@ -726,7 +739,11 @@ Your task is to evaluate the user's UI layout description, current issues, targe
 - Cohesive interactive component states
 
 Reason privately and step-by-step. Do not output any thinking or brainstorming tags (like <thinking>, <analysis>, or hidden CoT tags).
-Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.`;
+Your output must be valid JSON only, conforming exactly to the requested schema. Do not prefix or suffix with any other comments.
+
+### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):
+${recipeProfile.instructionBlock}
+Ensure the scores, strengths, issues, wins, and implementation prompts generated align closely with this style's priorities.`;
 
       try {
         const chosenModel = settings?.model || "gemini-3.5-flash";
@@ -770,7 +787,7 @@ Your output must be valid JSON only, conforming exactly to the requested schema.
   // Main prompt refinement endpoint
   app.post("/api/refine", async (req, res) => {
     try {
-      const { rawPrompt, projectContext, conversationHistory, mode, settings, recipeId } = req.body;
+      const { rawPrompt, projectContext, conversationHistory, mode, settings, recipeId, refinementProfile } = req.body;
 
       if (!rawPrompt || typeof rawPrompt !== "string" || !rawPrompt.trim()) {
         return res.status(400).json({ ok: false, error: "The rawPrompt parameter is required and must be a non-empty string." });
@@ -783,7 +800,7 @@ Your output must be valid JSON only, conforming exactly to the requested schema.
       // 1. Mock mode logic
       if (mode === "mock") {
         try {
-          const mockResult = recipe.mockGenerator(rawPrompt, projectContext);
+          const mockResult = recipe.mockGenerator(rawPrompt, projectContext, refinementProfile);
           if (activeRecipeId === "blueprint") {
             return res.json({ ok: true, blueprint: mockResult });
           } else {
@@ -807,8 +824,11 @@ Your output must be valid JSON only, conforming exactly to the requested schema.
       const userPromptContent = recipe.userPayloadBuilder(rawPrompt, projectContext, conversationHistory);
 
       try {
+        const recipeProfile = getProfileById(refinementProfile || "balanced");
+        const systemInstruction = `${recipe.systemInstruction}\n\n### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):\n${recipeProfile.instructionBlock}\nEnsure all specifications, lists, prompts, and notes generated align closely with this style.`;
+
         const config: any = {
-          systemInstruction: recipe.systemInstruction,
+          systemInstruction,
           temperature: typeof settings?.temperature === 'number' ? settings.temperature : 0.2,
         };
 
@@ -918,7 +938,8 @@ Your output must be valid JSON only, conforming exactly to the requested schema.
         keptAssumptions,
         rejectedAssumptions,
         mode,
-        settings
+        settings,
+        refinementProfile
       } = req.body;
 
       if (!currentBlueprint || typeof currentBlueprint !== "object") {
@@ -1029,8 +1050,9 @@ Your output must be valid JSON only, conforming exactly to the requested schema.
       userPromptContent += `Structure your output exactly matching the described schema version '1.0'. Generate NO other text.`;
 
       try {
+        const recipeProfile = getProfileById(refinementProfile || "balanced");
         const config: any = {
-          systemInstruction: ENHANCER_SYSTEM_PROMPT,
+          systemInstruction: `${ENHANCER_SYSTEM_PROMPT}\n\n### ACTIVE REFINEMENT STYLE (CRITICAL DIRECTION):\n${recipeProfile.instructionBlock}\nEnsure all revised specifications, lists, prompts, and notes generated align closely with this style.`,
           responseMimeType: "application/json",
           temperature: typeof settings?.temperature === 'number' ? settings.temperature : 0.2,
         };

@@ -14,6 +14,7 @@ export interface VibeCodingPacket {
   functional_requirements_should_have?: any[];
   developer_notes?: any[];
   final_prompt?: string;
+  refinementProfile?: string;
 }
 
 export type ImportType = 

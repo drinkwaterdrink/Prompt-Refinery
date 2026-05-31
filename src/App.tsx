@@ -16,6 +16,7 @@ import { useDesignAudit } from './hooks/useDesignAudit';
 import { copyToClipboardSafe } from './lib/clipboard';
 import { detectAndParseImport } from './lib/json';
 import { downloadJSON, downloadMarkdown } from './lib/exporters';
+import { REFINEMENT_PROFILES, getProfileById } from './lib/promptProfiles';
 
 // Components
 import { Toast } from './components/Toast';
@@ -36,6 +37,9 @@ import { SparkIdea } from './types';
 export default function App() {
   // Toast Alert hook
   const { toastMessage, showToast } = useToast();
+
+  // Refinement profile state
+  const [refinementProfile, setRefinementProfile] = useState<string>('balanced');
 
   // Input states
   const [rawPrompt, setRawPrompt] = useState<string>('');
@@ -118,7 +122,12 @@ export default function App() {
       recipeId,
       matchesSpark ? activeSpark.title : undefined,
       matchesSpark ? activeSpark.novelty : undefined,
-      matchesSpark ? activeSpark.tags : undefined
+      matchesSpark ? activeSpark.tags : undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      refinementProfile
     );
   };
 
@@ -193,7 +202,10 @@ export default function App() {
         matchesSpark ? activeSpark.novelty : undefined,
         matchesSpark ? activeSpark.tags : undefined,
         type,
-        pipeline
+        pipeline,
+        undefined,
+        undefined,
+        refinementProfile
       );
     }
   });
@@ -237,7 +249,9 @@ export default function App() {
         matchesSpark ? activeSpark.tags : undefined,
         type,
         pipeline,
-        projectResult
+        projectResult,
+        undefined,
+        refinementProfile
       );
     }
   });
@@ -282,7 +296,8 @@ export default function App() {
         type,
         pipeline,
         projectResult,
-        designAuditResult
+        designAuditResult,
+        refinementProfile
       );
     }
   });
@@ -296,7 +311,7 @@ export default function App() {
       strictMode,
       browserApiKey,
       debugMode
-    });
+    }, refinementProfile);
   };
 
   const handleDesignSubmit = (e: React.FormEvent) => {
@@ -308,7 +323,7 @@ export default function App() {
       strictMode,
       browserApiKey,
       debugMode
-    });
+    }, refinementProfile);
   };
 
   const handleUseAsRawPrompt = (phasePrompt: string, projectSummary: string) => {
@@ -434,12 +449,12 @@ export default function App() {
   // Enhance Prompt wrapper
   const handleEnhancePrompt = (e: React.FormEvent) => {
     e.preventDefault();
-    enhancePrompt(rawPrompt, projectContext, historyRows, activeTab);
+    enhancePrompt(rawPrompt, projectContext, historyRows, activeTab, refinementProfile);
   };
 
   // Refine Blueprint wrapper
   const handleRefineBlueprint = () => {
-    handleRefineBlueprint();
+    refineBlueprint(rawPrompt, projectContext, historyRows, activeTab, refinementProfile);
   };
 
   // Clipboard Copier
@@ -455,7 +470,8 @@ export default function App() {
   // Exports
   const handleExportJSON = () => {
     if (!blueprint) return;
-    downloadJSON(blueprint, `${blueprint.title.replace(/\s+/g, '_')}_blueprint.json`);
+    const blueprintWithProfile = { ...blueprint, refinementProfile };
+    downloadJSON(blueprintWithProfile, `${blueprint.title.replace(/\s+/g, '_')}_blueprint.json`);
   };
 
   const handleExportMarkdown = () => {
@@ -477,7 +493,8 @@ export default function App() {
       functional_requirements_must_have: blueprint.functional_requirements?.must_have || [],
       functional_requirements_should_have: blueprint.functional_requirements?.should_have || [],
       developer_notes: blueprint.developer_notes || [],
-      final_prompt: blueprint.final_prompt
+      final_prompt: blueprint.final_prompt,
+      refinementProfile
     };
     downloadJSON(packet, `${blueprint.title.replace(/\s+/g, '_')}_vibe_coding_packet.json`);
     showToast("Exported complete Vibe Coding Packet.");
@@ -500,12 +517,18 @@ export default function App() {
         setRawPrompt(result.data.final_prompt ? `Imported: ${result.data.title}` : "Imported Prompt");
         setProjectContext(result.data.summary || "");
         setHistoryRows([]);
+        if (result.data.refinementProfile) {
+          setRefinementProfile(result.data.refinementProfile);
+        }
         showToast("Imported and verified prompt blueprint successfully!");
       } else if (result.type === 'vibe_packet') {
         // Load context fields into raw states
         if (result.data.original_raw_prompt) setRawPrompt(result.data.original_raw_prompt);
         if (result.data.project_context) setProjectContext(result.data.project_context);
         if (result.data.conversation_history) setHistoryRows(result.data.conversation_history);
+        if (result.data.refinementProfile) {
+          setRefinementProfile(result.data.refinementProfile);
+        }
         showToast("Vibe coding packet loaded as input context.");
       } else {
         // Show validation or syntax errors without wiping out active blueprint
@@ -524,6 +547,7 @@ export default function App() {
     setValidationErrors(null);
     setGeminiError(null);
     setRejectionStates({});
+    setRefinementProfile(item.refinementProfile || 'balanced');
 
     if (item.type === 'project' && item.projectResult) {
       setWorkflowMode('project');
@@ -577,6 +601,7 @@ export default function App() {
     clearPipeline();
     clearProject();
     clearAudit();
+    setRefinementProfile('balanced');
     showToast('Controls cleared.');
   };
 
@@ -751,52 +776,89 @@ export default function App() {
         {/* Right Side: Generation Result / Output Preview Column */}
         <section className="lg:col-span-7 flex flex-col" id="right-preview-panel">
           
-          {/* Workflow Mode Selector tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl mb-4 self-start flex-wrap sm:flex-nowrap animate-fade-in">
-            <button
-              type="button"
-              onClick={() => setWorkflowMode('blueprint')}
-              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                workflowMode === 'blueprint'
-                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
-              }`}
-            >
-              ⚡ New Prompt Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkflowMode('pipeline')}
-              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                workflowMode === 'pipeline'
-                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
-              }`}
-            >
-              ⛓️ Refinery Pipeline
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkflowMode('project')}
-              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                workflowMode === 'project'
-                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
-              }`}
-            >
-              🔍 Iterative Project Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkflowMode('design_audit')}
-              className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                workflowMode === 'design_audit'
-                  ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
-              }`}
-            >
-              📐 Design Audit Mode
-            </button>
+          {/* Tabs and Profile Selector Container */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 w-full animate-fade-in">
+            {/* Workflow Mode Selector tabs */}
+            <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl flex-wrap sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={() => setWorkflowMode('blueprint')}
+                className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  workflowMode === 'blueprint'
+                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+                }`}
+              >
+                ⚡ New Prompt Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkflowMode('pipeline')}
+                className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  workflowMode === 'pipeline'
+                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+                }`}
+              >
+                ⛓️ Refinery Pipeline
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkflowMode('project')}
+                className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  workflowMode === 'project'
+                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+                }`}
+              >
+                🔍 Iterative Project Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkflowMode('design_audit')}
+                className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                  workflowMode === 'design_audit'
+                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
+                }`}
+              >
+                📐 Design Audit Mode
+              </button>
+            </div>
+
+            {/* Global Refinement Profile Selector Dropdown */}
+            <div className="relative group flex items-center gap-2 font-sans self-start sm:self-auto bg-[#111111] border border-[#1F1F1F] hover:border-[#D4AF37]/50 rounded-xl p-1 px-2.5 h-[42px] transition duration-200 shadow-md">
+              <span className="text-[10px] font-bold font-mono text-[#D4AF37] uppercase tracking-wider select-none">
+                Profile:
+              </span>
+              <select
+                value={refinementProfile}
+                onChange={(e) => {
+                  setRefinementProfile(e.target.value);
+                  showToast(`Switched quality profile to: ${getProfileById(e.target.value).label}`);
+                }}
+                className="bg-transparent text-xs text-slate-200 font-bold border-none focus:outline-none focus:ring-0 cursor-pointer pr-1"
+              >
+                {REFINEMENT_PROFILES.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[#111111] text-slate-200 font-sans">
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Dynamic CSS Tooltip on Hover */}
+              <div className="absolute right-0 bottom-full mb-2.5 hidden group-hover:block w-[300px] bg-[#161616] border border-[#262626] rounded-xl p-3 shadow-2xl z-50 text-xs animate-fade-in pointer-events-none">
+                <div className="text-[#D4AF37] font-bold font-mono uppercase tracking-wider text-[10px] mb-1">
+                  🎯 {getProfileById(refinementProfile).label} Focus
+                </div>
+                <div className="text-slate-300 font-medium leading-relaxed">
+                  {getProfileById(refinementProfile).description}
+                </div>
+                <div className="mt-2 pt-2 border-t border-[#222222] text-slate-500 font-mono text-[9px] leading-normal italic">
+                  "{getProfileById(refinementProfile).instructionBlock.substring(0, 110)}..."
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex-1 bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl flex flex-col overflow-hidden min-h-[500px] shadow-2xl">
@@ -816,7 +878,7 @@ export default function App() {
                 pipeline={pipeline}
                 stageStatuses={stageStatuses}
                 stageErrors={stageErrors}
-                onGenerateStage={(key) => generateStage(key, rawPrompt, projectContext, historyRows)}
+                onGenerateStage={(key) => generateStage(key, rawPrompt, projectContext, historyRows, refinementProfile)}
                 onCopy={handleCopy}
                 rawPrompt={rawPrompt}
                 projectContext={projectContext}
@@ -936,7 +998,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v0.06 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v0.07 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>

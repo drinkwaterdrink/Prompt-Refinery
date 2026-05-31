@@ -2,6 +2,17 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.07] - 2026-05-31
+
+### Added Prompt Quality Profiles (Phase 14)
+- Designed and built a system of **8 Prompt Quality Profiles** (Balanced, Senior Engineer, UI/UX Designer, Product Strategist, Bugfix/Debug, Refactor/Optimization, PWA/Mobile, Black-Swan Creative) that influence and customize the generated outputs of all recipes and modes without altering baseline JSON schemas.
+- Programmed a global, beautifully styled drop-down selection widget in `src/App.tsx` directly next to the Workflow Mode selector tabs, featuring a sleek hover-tooltip showing the active profile's goals and descriptions.
+- Integrated profile selections into the `saveToWorkflowHistory` callback, preserving the active quality profile in LocalStorage history and correctly restoring it upon selection in the sidebar panel.
+- Enhanced JSON/Markdown templates, Vibe coding packets, and timeline pipeline stages exporters and importers to support and synchronize the active refinement profile seamlessly.
+- Configured backend endpoints (`POST /api/refine`, `/api/refine-loop`, `/api/project-ideas`, `/api/design-audit`, and `/api/sparks`) inside `server.ts` to append dynamic system instruction guidance blocks to the AI model's baseline prompts.
+- Enforced profile-specific deviations inside mock outcomes generators in `src/mockData.ts` and fallback Express router blocks, enabling custom titles, risks checklists, UI/UX AA guidelines, and creative pivot constraints.
+- Incremented footer version description and `package.json` to version `v0.07`.
+
 ## [0.06] - 2026-05-31
 
 ### Added Design Audit Mode using the Design Principles Appendix (Phase 13)

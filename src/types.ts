@@ -109,6 +109,7 @@ export interface PromptBlueprint {
   edge_cases: string[];
   developer_notes: string[];
   final_prompt: string;
+  refinementProfile?: string;
 }
 
 /**
@@ -410,5 +411,6 @@ export interface WorkflowHistoryItem {
   pipeline?: RefineryPipeline;
   projectResult?: ProjectImprovementResult;
   designAuditResult?: DesignAuditResult;
+  refinementProfile?: string;
 }
 

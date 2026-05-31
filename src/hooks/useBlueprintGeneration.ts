@@ -29,7 +29,12 @@ interface UseBlueprintGenerationProps {
     recipeId?: string,
     sparkTitle?: string,
     sparkNovelty?: 'practical' | 'unusual' | 'black-swan',
-    sparkTags?: string[]
+    sparkTags?: string[],
+    type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit',
+    pipeline?: any,
+    projectResult?: any,
+    designAuditResult?: any,
+    refinementProfile?: string
   ) => void;
 }
 
@@ -90,7 +95,8 @@ export function useBlueprintGeneration({
     rawPrompt: string,
     projectContext: string,
     historyRows: ConversationHistoryRow[],
-    activeTab: string
+    activeTab: string,
+    refinementProfile: string
   ) => {
     if (!rawPrompt.trim()) {
       showToast('Please enter a raw prompt first.');
@@ -120,7 +126,7 @@ export function useBlueprintGeneration({
       setTimeout(() => {
         clearInterval(interval);
         try {
-          const mockOutcome = recipe.mockGenerator(rawPrompt, projectContext);
+          const mockOutcome = recipe.mockGenerator(rawPrompt, projectContext, refinementProfile);
 
           if (selectedRecipeId === 'blueprint') {
             let candidateBlueprint: any;
@@ -143,7 +149,7 @@ export function useBlueprintGeneration({
               setOriginalProjectContext(projectContext);
               setOriginalConversationHistory(historyRows);
               showToast('Blueprint generated and verified successfully.');
-              saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'mock', activeTab, 'blueprint');
+              saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'mock', activeTab, 'blueprint', undefined, undefined, undefined, 'blueprint', undefined, undefined, undefined, refinementProfile);
             }
           } else {
             const sanitizedResult = recursiveSanitize(mockOutcome);
@@ -154,7 +160,7 @@ export function useBlueprintGeneration({
             setOriginalProjectContext(projectContext);
             setOriginalConversationHistory(historyRows);
             showToast(`${recipe.label} generated successfully.`);
-            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedResult, 'mock', activeTab, selectedRecipeId);
+            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedResult, 'mock', activeTab, selectedRecipeId, undefined, undefined, undefined, 'blueprint', undefined, undefined, undefined, refinementProfile);
           }
         } catch (err: any) {
           showToast('Failed generating mock outcome.');
@@ -180,6 +186,7 @@ export function useBlueprintGeneration({
             conversationHistory: historyRows,
             mode: forceValidationError ? 'mock' : 'gemini',
             recipeId: selectedRecipeId,
+            refinementProfile,
             settings: {
               model,
               temperature,
@@ -205,7 +212,7 @@ export function useBlueprintGeneration({
             setOriginalProjectContext(projectContext);
             setOriginalConversationHistory(historyRows);
             showToast('Blueprint generated and verified via Gemini!');
-            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'gemini', activeTab, 'blueprint');
+            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedBp, 'gemini', activeTab, 'blueprint', undefined, undefined, undefined, 'blueprint', undefined, undefined, undefined, refinementProfile);
           } else {
             const sanitizedResult = recursiveSanitize(result);
             setRecipeResult(sanitizedResult);
@@ -216,7 +223,7 @@ export function useBlueprintGeneration({
             setOriginalProjectContext(projectContext);
             setOriginalConversationHistory(historyRows);
             showToast(`${result.title || recipe.label} generated via Gemini!`);
-            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedResult, 'gemini', activeTab, selectedRecipeId);
+            saveToWorkflowHistory(rawPrompt, projectContext, historyRows, sanitizedResult, 'gemini', activeTab, selectedRecipeId, undefined, undefined, undefined, 'blueprint', undefined, undefined, undefined, refinementProfile);
           }
         } else {
           setGeminiError(result.error || 'Server returned an error generating result.');
@@ -246,7 +253,8 @@ export function useBlueprintGeneration({
     rawPrompt: string,
     projectContext: string,
     historyRows: ConversationHistoryRow[],
-    activeTab: string
+    activeTab: string,
+    refinementProfile: string
   ) => {
     if (!blueprint) return;
 
@@ -291,6 +299,7 @@ export function useBlueprintGeneration({
         keptAssumptions: kept,
         rejectedAssumptions: rejected,
         mode: generationMode,
+        refinementProfile,
         settings: {
           model,
           temperature,
@@ -327,7 +336,15 @@ export function useBlueprintGeneration({
           sanitizedBp,
           generationMode,
           activeTab,
-          'blueprint'
+          'blueprint',
+          undefined,
+          undefined,
+          undefined,
+          'blueprint',
+          undefined,
+          undefined,
+          undefined,
+          refinementProfile
         );
       } else {
         setRefinementError(result?.error || 'Server refused requested refinement payload.');

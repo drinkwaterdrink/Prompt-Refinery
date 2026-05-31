@@ -314,148 +314,183 @@ export const MOCK_MALFORMED_BLUEPRINT: any = {
   final_prompt: "" // Error: must not be empty
 };
 
-export const generateBlueprintForPrompt = (prompt: string, context?: string): PromptBlueprint => {
+export const generateBlueprintForPrompt = (prompt: string, context?: string, refinementProfile?: string): PromptBlueprint => {
   const normalized = prompt.toLowerCase();
+  let base: PromptBlueprint;
   
   if (normalized.includes('workout') || normalized.includes('exercise') || normalized.includes('track')) {
-    return {
+    base = {
       ...MOCK_BLUEPRINT_WORKOUTS,
       title: context ? `FitQuest Custom: ${MOCK_BLUEPRINT_WORKOUTS.title}` : MOCK_BLUEPRINT_WORKOUTS.title
     };
-  }
-
-  if (normalized.includes('dash') || normalized.includes('board') || normalized.includes('chart') || normalized.includes('stats')) {
-    return {
+  } else if (normalized.includes('dash') || normalized.includes('board') || normalized.includes('chart') || normalized.includes('stats')) {
+    base = {
       ...MOCK_BLUEPRINT_DASHBOARD,
       title: context ? `AeroBoard Custom: ${MOCK_BLUEPRINT_DASHBOARD.title}` : MOCK_BLUEPRINT_DASHBOARD.title
     };
+  } else {
+    // Fallback beautiful template customized based on their prompt
+    const fallbackTitle = `Custom Refinery Draft: ${prompt.slice(0, 35)}${prompt.length > 35 ? '...' : ''}`;
+    
+    base = {
+      schema_version: BLUEPRINT_OUTPUT_CONTRACT.schema_version,
+      title: fallbackTitle,
+      summary: `A customized solution tailored to refine the request: "${prompt}". Synthesizes layout boundaries, structural paradigms, and user expectations into high-value engineering prompts.`,
+      intent_classification: {
+        request_type: "new_build",
+        confidence: "medium",
+        detected_domain: "General Application Engineering"
+      },
+      problem_clarification: {
+        expanded_description: `Evaluating the initial requirements for: "${prompt}". Core goals include organizing structural components into a balanced architecture.`,
+        core_objectives: [
+          `Deliver on the primary request: "${prompt}"`,
+          "Provide a polished, responsive component system with zero initial bloat",
+          "Introduce clean custom visual layouts aligning with user expectations"
+        ],
+        primary_users: [
+          "End-users of custom modern web utilities",
+          "Full-stack developers implementing clean boilerplate starts"
+        ],
+        assumptions: [
+          {
+            "id": "A1",
+            "text": "The implementation prefers a fully modern browser workflow with modular component dependencies.",
+            "confidence": "high",
+            "source": "industry_default"
+          },
+          {
+            "id": "A2",
+            "text": context ? `Custom design relies on specified context: "${context}"` : "The applet operates as a responsive web-app without external legacy databases.",
+            "confidence": "high",
+            "source": context ? "explicit" : "inferred_from_context"
+          }
+        ],
+        constraints: [
+          "Render optimally on mobile-first and desktop-proportional dimensions",
+          "Use clean design pairings with Inter display structures"
+        ]
+      },
+      functional_requirements: {
+        must_have: [
+          "Interactive dashboard interface featuring user controls",
+          "Robust state managers supporting modern React hook patterns",
+          "Complete accessibility labels and friendly empty state placeholders"
+        ],
+        should_have: [
+          "Smooth page transition fades and button triggers",
+          "Data persistence for active configurations"
+        ],
+        could_have: [
+          "Analytical overview statistics or exportable layouts",
+          "Dark mode adaptation with tailored theme variables"
+        ],
+        wont_have: [
+          "Custom desktop native launchers or standalone apps",
+          "Automatic background cloud syncing without prior consent"
+        ]
+      },
+      architecture: {
+        paradigm: "Single Page Application (SPA)",
+        frontend: "React 19, TypeScript, Tailwind CSS v4, Lucide Icons",
+        backend: "None (Client-side execution template)",
+        database: "Browser localStorage with automatic serialization",
+        apis: "JSON/REST placeholder structures",
+        services: [],
+        integrations: [],
+        infra: "Vite deployment configurations",
+        devops: "Standard continuous linting and verification tasks"
+      },
+      data_models: {
+        entities: [
+          "DataRecord: { id, createdAt, title, dataPayload }",
+          "AppSettings: { theme, isPersistent, version }"
+        ],
+        schemas: [
+          "interface AppState { records: DataRecord[]; settings: AppSettings; }"
+        ]
+      },
+      user_experience: {
+        design_style: "Modern minimalist slate theme, high physical contrast spacing, sleek cards",
+        layout_system: "Responsive flex and grid sections adapting cleanly across breakpoints",
+        navigation_structure: "Header navigation with dynamic status modules",
+        component_list: [
+          "AppShell",
+          "InteractiveInputForm",
+          "InformationTabsContainer",
+          "DetailsAccordion",
+          "FeedbackBannerToast"
+        ],
+        interaction_states: [
+          "Button hovering displays responsive transitions",
+          "State inputs show bright outline focus rings"
+        ],
+        user_flows: [
+          "Open applet view -> Input initial dataset -> Press process CTA -> Output renders with instant success alerts."
+        ],
+        animations: "Subtle spring entries (motion/react) and interactive state transitions",
+        accessibility: "Fully compliant AAA contrast ratings, custom focus-rings, scale adaptability"
+      },
+      security_reliability: {
+        authentication: "None (Fully client-administered layout)",
+        authorization: "None requested",
+        data_validation: "Strict checking of user variables prior to parsing operations",
+        rate_limiting: "None required in browser-only scopes",
+        logging_monitoring: "Standard web console logs tracing states",
+        error_handling: "Beautiful visual fallback page with clear descriptive errors",
+        privacy: "Local sandboxing protects operator privacy fully."
+      },
+      performance_constraints: {
+        scalability: "Infinite scalability due to serverless structure",
+        latency: "Local response under 10ms",
+        load_expectations: "Lightweight script bundles load within 1s",
+        resource_constraints: "Optimized for minimal CPU and battery impact"
+      },
+      edge_cases: [
+        "User supplies complex unicode characters in text areas",
+        "Empty prompt input submission gets caught with responsive validation prompts"
+      ],
+      developer_notes: [
+        "Verify components are kept modular to prevent bundle bloating.",
+        "Utilize native React state selectors for speed."
+      ],
+      final_prompt: `Create a clean React + Tailwind SPA based on: "${prompt}". Implement a sleek design using a slate grey theme with indigo highlights. Organize features inside a responsive single-page container. Ensure state hooks handle user inputs beautifully and data is rendered on structured, readable cards with polished spacing.`
+    };
   }
 
-  // Fallback beautiful template customized based on their prompt
-  const fallbackTitle = `Custom Refinery Draft: ${prompt.slice(0, 35)}${prompt.length > 35 ? '...' : ''}`;
-  
-  return {
-    schema_version: BLUEPRINT_OUTPUT_CONTRACT.schema_version,
-    title: fallbackTitle,
-    summary: `A customized solution tailored to refine the request: "${prompt}". Synthesizes layout boundaries, structural paradigms, and user expectations into high-value engineering prompts.`,
-    intent_classification: {
-      request_type: "new_build",
-      confidence: "medium",
-      detected_domain: "General Application Engineering"
-    },
-    problem_clarification: {
-      expanded_description: `Evaluating the initial requirements for: "${prompt}". Core goals include organizing structural components into a balanced architecture.`,
-      core_objectives: [
-        `Deliver on the primary request: "${prompt}"`,
-        "Provide a polished, responsive component system with zero initial bloat",
-        "Introduce clean custom visual layouts aligning with user expectations"
-      ],
-      primary_users: [
-        "End-users of custom modern web utilities",
-        "Full-stack developers implementing clean boilerplate starts"
-      ],
-      assumptions: [
-        {
-          "id": "A1",
-          "text": "The implementation prefers a fully modern browser workflow with modular component dependencies.",
-          "confidence": "high",
-          "source": "industry_default"
-        },
-        {
-          "id": "A2",
-          "text": context ? `Custom design relies on specified context: "${context}"` : "The applet operates as a responsive web-app without external legacy databases.",
-          "confidence": "high",
-          "source": context ? "explicit" : "inferred_from_context"
-        }
-      ],
-      constraints: [
-        "Render optimally on mobile-first and desktop-proportional dimensions",
-        "Use clean design pairings with Inter display structures"
-      ]
-    },
-    functional_requirements: {
-      must_have: [
-        "Interactive dashboard interface featuring user controls",
-        "Robust state managers supporting modern React hook patterns",
-        "Complete accessibility labels and friendly empty state placeholders"
-      ],
-      should_have: [
-        "Smooth page transition fades and button triggers",
-        "Data persistence for active configurations"
-      ],
-      could_have: [
-        "Analytical overview statistics or exportable layouts",
-        "Dark mode adaptation with tailored theme variables"
-      ],
-      wont_have: [
-        "Custom desktop native launchers or standalone apps",
-        "Automatic background cloud syncing without prior consent"
-      ]
-    },
-    architecture: {
-      paradigm: "Single Page Application (SPA)",
-      frontend: "React 19, TypeScript, Tailwind CSS v4, Lucide Icons",
-      backend: "None (Client-side execution template)",
-      database: "Browser localStorage with automatic serialization",
-      apis: "JSON/REST placeholder structures",
-      services: [],
-      integrations: [],
-      infra: "Vite deployment configurations",
-      devops: "Standard continuous linting and verification tasks"
-    },
-    data_models: {
-      entities: [
-        "DataRecord: { id, createdAt, title, dataPayload }",
-        "AppSettings: { theme, isPersistent, version }"
-      ],
-      schemas: [
-        "interface AppState { records: DataRecord[]; settings: AppSettings; }"
-      ]
-    },
-    user_experience: {
-      design_style: "Modern minimalist slate theme, high physical contrast spacing, sleek cards",
-      layout_system: "Responsive flex and grid sections adapting cleanly across breakpoints",
-      navigation_structure: "Header navigation with dynamic status modules",
-      component_list: [
-        "AppShell",
-        "InteractiveInputForm",
-        "InformationTabsContainer",
-        "DetailsAccordion",
-        "FeedbackBannerToast"
-      ],
-      interaction_states: [
-        "Button hovering displays responsive transitions",
-        "State inputs show bright outline focus rings"
-      ],
-      user_flows: [
-        "Open applet view -> Input initial dataset -> Press process CTA -> Output renders with instant success alerts."
-      ],
-      animations: "Subtle spring entries (motion/react) and interactive state transitions",
-      accessibility: "Fully compliant AAA contrast ratings, custom focus-rings, scale adaptability"
-    },
-    security_reliability: {
-      authentication: "None (Fully client-administered layout)",
-      authorization: "None requested",
-      data_validation: "Strict checking of user variables prior to parsing operations",
-      rate_limiting: "None required in browser-only scopes",
-      logging_monitoring: "Standard web console logs tracing states",
-      error_handling: "Beautiful visual fallback page with clear descriptive errors",
-      privacy: "Local sandboxing protects operator privacy fully."
-    },
-    performance_constraints: {
-      scalability: "Infinite scalability due to serverless structure",
-      latency: "Local response under 10ms",
-      load_expectations: "Lightweight script bundles load within 1s",
-      resource_constraints: "Optimized for minimal CPU and battery impact"
-    },
-    edge_cases: [
-      "User supplies complex unicode characters in text areas",
-      "Empty prompt input submission gets caught with responsive validation prompts"
-    ],
-    developer_notes: [
-      "Verify components are kept modular to prevent bundle bloating.",
-      "Utilize native React state selectors for speed."
-    ],
-    final_prompt: `Create a clean React + Tailwind SPA based on: "${prompt}". Implement a sleek design using a slate grey theme with indigo highlights. Organize features inside a responsive single-page container. Ensure state hooks handle user inputs beautifully and data is rendered on structured, readable cards with polished spacing.`
-  };
+  // Deep clone to safely mutate
+  const blueprint = JSON.parse(JSON.stringify(base));
+
+  if (refinementProfile === 'senior_engineer') {
+    blueprint.title = `[Senior Eng] ${blueprint.title}`;
+    blueprint.summary = `${blueprint.summary} (Refined for Senior Engineer: safe incremental changes, specific target files, and test coverage checklists).`;
+    blueprint.developer_notes = [
+      "Pragmatic approach: verify file targets and avoid system wide rewrites.",
+      "Check affected modules in index.css and main client hooks before execution.",
+      ...(blueprint.developer_notes || [])
+    ];
+    blueprint.final_prompt = `[SENIOR ENGINEER OPTIMIZATION]\nApply pragmatic coding standards. Deliver incremental surgical updates, specify file changes, list risks, and establish unit tests.\n\n${blueprint.final_prompt}`;
+  } else if (refinementProfile === 'ui_ux') {
+    blueprint.title = `[UI/UX] ${blueprint.title}`;
+    blueprint.summary = `${blueprint.summary} (Refined for UI/UX Designer: HSL style tokens, focus rings, responsive layouts, and transitions).`;
+    blueprint.user_experience.animations = `Translucent HSL glassmorphism animations, transition-all duration-200. ${blueprint.user_experience.animations}`;
+    blueprint.user_experience.accessibility = `WCAG AA compliant focus outlines (focus-visible:ring-2), keyboard shortcuts, tap sizes >48px. ${blueprint.user_experience.accessibility}`;
+    blueprint.final_prompt = `[UI/UX DESIGNER DIRECTION]\nAdopt premium visual styling. Focus on clean layout hierarchy, fluid animations, outline focus rings, and responsive screens.\n\n${blueprint.final_prompt}`;
+  } else if (refinementProfile === 'black_swan_creative') {
+    blueprint.title = `[Black-Swan] ${blueprint.title}`;
+    blueprint.summary = `Defensible Black-Swan concept: ${blueprint.summary} incorporating Ephemeral zero-UI mechanics and gamified defensibility.`;
+    blueprint.problem_clarification.constraints = [
+      "Epic ambient first-principles restriction",
+      "No traditional input boxes allowed",
+      ...(blueprint.problem_clarification.constraints || [])
+    ];
+    blueprint.final_prompt = `[BLACK-SWAN CREATIVE DIRECTION]\nFulfill maximum novelty requirements. Force unconventional restraints, analog/ambient interactions, and unique core loops.\n\n${blueprint.final_prompt}`;
+  } else if (refinementProfile && refinementProfile !== 'balanced') {
+    const formattedLabel = refinementProfile.replace(/_/g, ' ').toUpperCase();
+    blueprint.title = `[${formattedLabel}] ${blueprint.title}`;
+    blueprint.summary = `${blueprint.summary} (Refined for profile: ${refinementProfile}).`;
+    blueprint.final_prompt = `[${formattedLabel} STYLE]\n\n${blueprint.final_prompt}`;
+  }
+
+  return blueprint;
 };

@@ -23,7 +23,8 @@ interface UseDesignAuditProps {
     type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit',
     pipeline?: any,
     projectResult?: any,
-    designAuditResult?: DesignAuditResult
+    designAuditResult?: DesignAuditResult,
+    refinementProfile?: string
   ) => void;
 }
 
@@ -70,7 +71,8 @@ export function useDesignAudit({
 
   const analyzeDesign = useCallback(async (
     generationMode: 'mock' | 'gemini',
-    settings: any
+    settings: any,
+    refinementProfile: string
   ) => {
     if (!projectName.trim()) {
       showToast('Please enter a project name.');
@@ -99,6 +101,7 @@ export function useDesignAudit({
           stylePreference: stylePreference.trim(),
           designNotes: designNotes.trim(),
           mode: generationMode,
+          refinementProfile,
           settings: {
             model: settings?.model,
             temperature: settings?.temperature,
@@ -131,7 +134,8 @@ export function useDesignAudit({
           'design_audit',
           undefined,
           undefined,
-          sanitizedResult
+          sanitizedResult,
+          refinementProfile
         );
 
         showToast('Design audit generated successfully!');

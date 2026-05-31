@@ -41,7 +41,8 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit',
     pipeline?: any,
     projectResult?: any,
-    designAuditResult?: any
+    designAuditResult?: any,
+    refinementProfile?: string
   ) => {
     // Clean all inputs and output structures using the recursive sanitizer
     const cleanPrompt = recursiveSanitize(prompt);
@@ -51,6 +52,7 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     const cleanPipeline = recursiveSanitize(pipeline);
     const cleanProjectResult = recursiveSanitize(projectResult);
     const cleanDesignAuditResult = recursiveSanitize(designAuditResult);
+    const cleanRefinementProfile = refinementProfile ? recursiveSanitize(refinementProfile) : undefined;
 
     const isBlueprint = type !== 'pipeline' && type !== 'project' && type !== 'design_audit' && bpOrResult && ('schema_version' in bpOrResult || !('content' in bpOrResult));
     
@@ -93,7 +95,8 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       type: type || 'blueprint',
       pipeline: type === 'pipeline' ? cleanPipeline : undefined,
       projectResult: type === 'project' ? cleanProjectResult : undefined,
-      designAuditResult: type === 'design_audit' ? cleanDesignAuditResult : undefined
+      designAuditResult: type === 'design_audit' ? cleanDesignAuditResult : undefined,
+      refinementProfile: cleanRefinementProfile
     };
 
     setWorkflowHistory((prev) => {

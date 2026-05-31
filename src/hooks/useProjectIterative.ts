@@ -20,9 +20,11 @@ interface UseProjectIterativeProps {
     sparkTitle?: string,
     sparkNovelty?: 'practical' | 'unusual' | 'black-swan',
     sparkTags?: string[],
-    type?: 'blueprint' | 'pipeline' | 'project',
+    type?: 'blueprint' | 'pipeline' | 'project' | 'design_audit',
     pipeline?: any,
-    projectResult?: ProjectImprovementResult
+    projectResult?: any,
+    designAuditResult?: any,
+    refinementProfile?: string
   ) => void;
 }
 
@@ -64,7 +66,8 @@ export function useProjectIterative({
 
   const analyzeProject = useCallback(async (
     generationMode: 'mock' | 'gemini',
-    settings: any
+    settings: any,
+    refinementProfile: string
   ) => {
     if (!projectName.trim()) {
       showToast('Please enter a project name.');
@@ -88,6 +91,7 @@ export function useProjectIterative({
           uploadedContextText: uploadedContextText.trim(),
           direction,
           mode: generationMode,
+          refinementProfile,
           settings: {
             model: settings?.model,
             temperature: settings?.temperature,
@@ -119,7 +123,9 @@ export function useProjectIterative({
           undefined,
           'project',
           undefined,
-          sanitizedResult
+          sanitizedResult,
+          undefined,
+          refinementProfile
         );
 
         showToast('Code review and optimization plan generated successfully!');
