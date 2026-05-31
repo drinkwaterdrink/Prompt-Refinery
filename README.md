@@ -6,7 +6,7 @@
 
 **Version:** 0.02  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
-Deploy link: https://ai.studio/apps/578e8b3d-4299-43a9-bb6d-ff0b0471f3cd
+
 
 ## Features
 - **Prompt Recipe Engine**: Supports multiple specialized generation targets (Blueprint, Idea Refinement, Technical Spec, Implementation Plan, Code Review, Design Audit, Black-Swan Ideation).
