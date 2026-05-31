@@ -13,6 +13,7 @@ import { validateBlueprint } from "./src/types";
 import { ENHANCER_SYSTEM_PROMPT, BLUEPRINT_OUTPUT_CONTRACT } from "./src/lib/prompt/enhancerSystemPrompt";
 import { recursiveSanitize } from "./src/lib/sanitize";
 import { getRecipeById, isValidRecipeId } from "./src/lib/promptRecipes/registry";
+import { generateLocalSparks } from "./src/lib/sparksMockGenerator";
 
 dotenv.config();
 
@@ -192,6 +193,128 @@ async function startServer() {
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", mode: process.env.GEMINI_API_KEY ? "gemini" : "mock-only" });
+  });
+
+  // Creative Spark Catalyst endpoint
+  app.post("/api/sparks", async (req, res) => {
+    const { count, novelty, category, mood, mode, settings } = req.body;
+    const sparkCount = typeof count === 'number' ? count : 3;
+    const sparkNovelty = (novelty === 'practical' || novelty === 'unusual' || novelty === 'black-swan') ? novelty : 'practical';
+
+    // 1. Mock mode routing
+    if (mode === "mock") {
+      try {
+        const ideas = generateLocalSparks(sparkCount, sparkNovelty);
+        return res.json({ ok: true, ideas });
+      } catch (mockErr: any) {
+        return res.status(500).json({ ok: false, error: "Failed to generate local mock spark ideas." });
+      }
+    }
+
+    // 2. Real Gemini Mode routing
+    const { ai: activeClient, error: clientSetupError } = getGeminiClient(settings);
+    if (clientSetupError || !activeClient) {
+      // Fallback gracefully to local mock ideas
+      const fallbackIdeas = generateLocalSparks(sparkCount, sparkNovelty);
+      return res.json({
+        ok: false,
+        error: clientSetupError || "Gemini Client could not be constructed. Serving local pre-seeded mock ideas.",
+        ideas: fallbackIdeas,
+        fallback: true
+      });
+    }
+
+    let userPromptContent = `Generate exactly ${sparkCount} buildable software/feature ideas for vibe coding.
+Novelty Tier requested: "${sparkNovelty}".
+`;
+    if (category) userPromptContent += `Target Category/Domain: "${category}".\n`;
+    if (mood) userPromptContent += `Target Mood/Aesthetic: "${mood}".\n`;
+
+    const sparksSystemInstruction = `You are a legendary startup incubator general partner and technology foresight researcher. Your task is to generate fresh app or feature ideas for vibe coding.
+Avoid generic todo apps or obvious concepts. Create high-quality, fully buildable concepts.
+For the requested novelty level ("practical", "unusual", "black-swan"), conform to these strict architectural criteria:
+- Practical: Focus on high-utility personal utilities, local grow room tracking, offline-first personal tracking tools, or developer utilities.
+- Unusual: Focus on niche tools, retro-inspired mechanics, world-building lore books, roleplay relationship nodes, or Web Audio oscillators.
+- Black-Swan: Fuse 2-3 unrelated technical pillars, identify a catalyst problem, add an unconventional constraint (e.g. deliberate friction, zero-UI, hyper-local/analog, ephemeral, ambient, voice-first), and produce a buildable but paradigm-shifting MVP loop. Ensure catalystProblem, corePillars, and whyNow are fully populated.
+
+You must reason privately. Output valid JSON only, matching the requested schema. Generate NO other text.`;
+
+    const sparksSchema = {
+      type: "OBJECT",
+      required: ["ok", "ideas"],
+      properties: {
+        ok: { type: "BOOLEAN" },
+        ideas: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            required: ["id", "title", "concept", "rawPrompt", "projectContext", "conversationHistory", "tags", "difficulty", "novelty"],
+            properties: {
+              id: { type: "STRING" },
+              title: { type: "STRING" },
+              concept: { type: "STRING" },
+              rawPrompt: { type: "STRING" },
+              projectContext: { type: "STRING" },
+              conversationHistory: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  required: ["id", "role", "content"],
+                  properties: {
+                    id: { type: "STRING" },
+                    role: { type: "STRING" },
+                    content: { type: "STRING" }
+                  }
+                }
+              },
+              tags: { type: "ARRAY", items: { type: "STRING" } },
+              difficulty: { type: "STRING" },
+              novelty: { type: "STRING" },
+              catalystProblem: { type: "STRING" },
+              corePillars: { type: "ARRAY", items: { type: "STRING" } },
+              whyNow: { type: "STRING" }
+            }
+          }
+        }
+      }
+    };
+
+    try {
+      const chosenModel = settings?.model || "gemini-3.5-flash";
+      const response = await activeClient.models.generateContent({
+        model: chosenModel,
+        contents: userPromptContent,
+        config: {
+          systemInstruction: sparksSystemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: sparksSchema,
+          temperature: typeof settings?.temperature === 'number' ? settings.temperature : 0.7,
+        }
+      });
+
+      const textOutput = response.text || "";
+      if (!textOutput.trim()) {
+        throw new Error("Received empty response from the Gemini model.");
+      }
+
+      const parsed = JSON.parse(textOutput);
+      if (parsed && Array.isArray(parsed.ideas)) {
+        return res.json({ ok: true, ideas: parsed.ideas });
+      }
+
+      throw new Error("JSON structure did not contain expected sparks list.");
+
+    } catch (geminiError: any) {
+      console.error("Gemini Sparks Generation failed:", geminiError);
+      const classified = handleProviderError(geminiError);
+      const fallbackIdeas = generateLocalSparks(sparkCount, sparkNovelty);
+      return res.json({
+        ok: false,
+        error: recursiveSanitize(classified.message),
+        ideas: fallbackIdeas,
+        fallback: true
+      });
+    }
   });
 
   // Main prompt refinement endpoint

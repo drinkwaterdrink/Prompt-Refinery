@@ -2,6 +2,19 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.03] - 2026-05-31
+
+### Added Creative Spark Catalyst & Black-Swan Ideation
+- Designed and built the **Creative Spark Catalyst** to replace the old static prefill buttons in the header with a dynamic app idea generator.
+- Programmed a highly curated local generator database and dynamic mix-and-match generator in `src/lib/sparksMockGenerator.ts` to provide practical, unusual, and black-swan concepts offline.
+- Created the `POST /api/sparks` server-side route in `server.ts` to compile prompts and return structured JSON idea arrays.
+- Enforced strict JSON response schema validation contracts on the Gemini model to guarantee robust structure matching our exact type specifications.
+- Fused the Black-Swan ideation framework into sparks generation, fuzing unrelated technical pillars, catalyst problems, unconventional constraints, and timely catalysts.
+- Engineered the custom, slide-over **CreativeSparkDrawer** React component featuring novelty level selection tabs, loading state triggers, and interactive cards displaying core pillars.
+- Integrated loader triggers inside `src/App.tsx` to prefill prompt inputs, project context, and simulated conversation history without automatically launching the generation pipeline, allowing review.
+- Connected a "Refine Idea" option on cards to automatically set prompt recipes to the **Idea Refinement** mode.
+- Preserved spark metadata (`sparkTitle`, `sparkNovelty`, `sparkTags`) inside the database workflow history for rich concept tracing.
+
 ## [0.02] - 2026-05-31
 
 ### Added Prompt Recipe Engine & Frameworks

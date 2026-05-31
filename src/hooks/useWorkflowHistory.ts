@@ -34,7 +34,10 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     bpOrResult: any,
     mode: 'gemini' | 'mock',
     activeTab: string,
-    recipeId?: string
+    recipeId?: string,
+    sparkTitle?: string,
+    sparkNovelty?: 'practical' | 'unusual' | 'black-swan',
+    sparkTags?: string[]
   ) => {
     // Clean all inputs and output structures using the recursive sanitizer
     const cleanPrompt = recursiveSanitize(prompt);
@@ -64,7 +67,10 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       recipeId: recipeId || (isBlueprint ? 'blueprint' : bpOrResult.recipeId),
       blueprint: isBlueprint ? cleanBpOrResult : undefined,
       recipeResult: !isBlueprint ? cleanBpOrResult : undefined,
-      selectedTab: activeTab
+      selectedTab: activeTab,
+      sparkTitle,
+      sparkNovelty,
+      sparkTags
     };
 
     setWorkflowHistory((prev) => {

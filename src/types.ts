@@ -290,6 +290,21 @@ export interface GenericRecipeResult {
   structuredData?: any;
 }
 
+export type SparkIdea = {
+  id: string;
+  title: string;
+  concept: string;
+  rawPrompt: string;
+  projectContext: string;
+  conversationHistory: ConversationHistoryRow[];
+  tags: string[];
+  difficulty: "quick" | "medium" | "ambitious";
+  novelty: "practical" | "unusual" | "black-swan";
+  catalystProblem?: string;
+  corePillars?: string[];
+  whyNow?: string;
+};
+
 export interface WorkflowHistoryItem {
   id: string;
   title: string;
@@ -303,5 +318,8 @@ export interface WorkflowHistoryItem {
   blueprint?: PromptBlueprint;
   recipeResult?: GenericRecipeResult;
   selectedTab?: string;
+  sparkTitle?: string;
+  sparkNovelty?: 'practical' | 'unusual' | 'black-swan';
+  sparkTags?: string[];
 }
 

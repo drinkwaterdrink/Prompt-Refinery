@@ -22,6 +22,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { WorkflowHistorySidebar } from './components/WorkflowHistorySidebar';
 import { InputPanel } from './components/InputPanel';
 import { BlueprintExplorer } from './components/BlueprintExplorer';
+import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
+import { SparkIdea } from './types';
 
 export default function App() {
   // Toast Alert hook
@@ -66,6 +68,14 @@ export default function App() {
   // UI Tabs inside Blueprint Explorer
   const [activeTab, setActiveTab] = useState<'overview' | 'requirements' | 'architecture' | 'data-ux' | 'reliability' | 'prompt' | 'json'>('overview');
 
+  // Spark Catalyst states
+  const [isSparkDrawerOpen, setIsSparkDrawerOpen] = useState<boolean>(false);
+  const [sparkIdeas, setSparkIdeas] = useState<SparkIdea[]>([]);
+  const [sparkNovelty, setSparkNovelty] = useState<'practical' | 'unusual' | 'black-swan'>('practical');
+  const [isGeneratingSparks, setIsGeneratingSparks] = useState<boolean>(false);
+  const [activeSpark, setActiveSpark] = useState<SparkIdea | null>(null);
+  const [geminiSparksError, setGeminiSparksError] = useState<string | null>(null);
+
   // Workflow history hook
   const {
     workflowHistory,
@@ -86,7 +96,19 @@ export default function App() {
     tab: string,
     recipeId?: string
   ) => {
-    saveToWorkflowHistory(prompt, context, history, bpOrResult, mode, tab, recipeId);
+    const matchesSpark = activeSpark && prompt === activeSpark.rawPrompt;
+    saveToWorkflowHistory(
+      prompt,
+      context,
+      history,
+      bpOrResult,
+      mode,
+      tab,
+      recipeId,
+      matchesSpark ? activeSpark.title : undefined,
+      matchesSpark ? activeSpark.novelty : undefined,
+      matchesSpark ? activeSpark.tags : undefined
+    );
   };
 
   // Generation Hook
@@ -147,6 +169,78 @@ export default function App() {
       setIsHistoryCollapsed(true);
       showToast('Loaded Fleet Dashboard Presets.');
     }
+  };
+
+  // Spark Catalyst actions
+  const fetchSparks = async (noveltyLevel: 'practical' | 'unusual' | 'black-swan') => {
+    setIsGeneratingSparks(true);
+    setGeminiSparksError(null);
+    try {
+      const response = await fetch('/api/sparks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          count: 4,
+          novelty: noveltyLevel,
+          mode: generationMode,
+          settings: {
+            model,
+            temperature,
+            maxOutputTokens,
+            strictMode,
+            browserApiKey: browserApiKey?.trim() || undefined,
+            debugMode
+          }
+        })
+      });
+      const result = await response.json();
+      if (response.ok && result.ok) {
+        setSparkIdeas(result.ideas || []);
+      } else {
+        setGeminiSparksError(result.error || 'Server error generating spark ideas.');
+        setSparkIdeas(result.ideas || []); // Fallback mock ideas
+        showToast('Using local mock sparks.');
+      }
+    } catch (err: any) {
+      console.error("Sparks fetch error:", err);
+      setGeminiSparksError('Network exception communicating with sparks engine.');
+      const { generateLocalSparks } = await import('./lib/sparksMockGenerator');
+      setSparkIdeas(generateLocalSparks(4, noveltyLevel));
+      showToast('Served local mock sparks.');
+    } finally {
+      setIsGeneratingSparks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSparkDrawerOpen) {
+      fetchSparks(sparkNovelty);
+    }
+  }, [isSparkDrawerOpen, sparkNovelty]);
+
+  const handleUseSpark = (idea: SparkIdea) => {
+    setRawPrompt(idea.rawPrompt);
+    setProjectContext(idea.projectContext);
+    setHistoryRows(idea.conversationHistory || []);
+    if (idea.conversationHistory && idea.conversationHistory.length > 0) {
+      setIsHistoryCollapsed(false);
+    }
+    setActiveSpark(idea);
+    setIsSparkDrawerOpen(false);
+    showToast(`Creative spark "${idea.title}" loaded.`);
+  };
+
+  const handleRefineSpark = (idea: SparkIdea) => {
+    setRawPrompt(idea.rawPrompt);
+    setProjectContext(idea.projectContext);
+    setHistoryRows(idea.conversationHistory || []);
+    if (idea.conversationHistory && idea.conversationHistory.length > 0) {
+      setIsHistoryCollapsed(false);
+    }
+    setActiveSpark(idea);
+    setSelectedRecipeId('idea_refinement');
+    setIsSparkDrawerOpen(false);
+    showToast(`Spark "${idea.title}" prepared for Idea Refinement recipe.`);
   };
 
   // Enhance Prompt wrapper
@@ -344,21 +438,16 @@ export default function App() {
 
           <span className="h-4 w-px bg-[#262626] mx-1 hidden md:block"></span>
 
-          <span className="text-[10px] font-mono text-slate-500 mr-1 hidden md:inline uppercase tracking-wider">QUICK PREFILL:</span>
           <button
             type="button"
-            onClick={() => applyPreset('workout')}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-[#D4AF37]/50 text-[#D4AF37] px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer"
+            onClick={() => setIsSparkDrawerOpen(true)}
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-[#D4AF37]/50 text-[#D4AF37] px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Open Creative Spark Catalyst app idea generator drawer"
           >
-            💪 Workout PWA
+            <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <span>Creative Spark</span>
           </button>
-          <button
-            type="button"
-            onClick={() => applyPreset('dashboard')}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-[#D4AF37]/50 text-[#D4AF37] px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer"
-          >
-            📊 Telemetry Dashboard
-          </button>
+          
           <button
             type="button"
             onClick={handleClear}
@@ -541,6 +630,20 @@ export default function App() {
         showApiKey={showApiKey}
         setShowApiKey={setShowApiKey}
         showToast={showToast}
+      />
+
+      {/* Creative Spark Drawer Overlay */}
+      <CreativeSparkDrawer
+        isOpen={isSparkDrawerOpen}
+        onClose={() => setIsSparkDrawerOpen(false)}
+        sparkIdeas={sparkIdeas}
+        isGeneratingSparks={isGeneratingSparks}
+        selectedNovelty={sparkNovelty}
+        onChangeNovelty={setSparkNovelty}
+        onRefreshSparks={() => fetchSparks(sparkNovelty)}
+        onUseSpark={handleUseSpark}
+        onRefineSpark={handleRefineSpark}
+        geminiError={geminiSparksError}
       />
 
     </div>

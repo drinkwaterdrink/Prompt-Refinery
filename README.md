@@ -4,11 +4,12 @@
 
 # Prompt Refinery
 
-**Version:** 0.02  
+**Version:** 0.03  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
 
 
 ## Features
+- **Creative Spark Catalyst**: A dynamic app idea generator featuring Practical, Unusual, and Black-Swan concept generation modes, equipped with full offline fallbacks.
 - **Prompt Recipe Engine**: Supports multiple specialized generation targets (Blueprint, Idea Refinement, Technical Spec, Implementation Plan, Code Review, Design Audit, Black-Swan Ideation).
 - **Stunning UI Selector**: Premium selector dropdown inside input configuration pane.
 - **Scrollable Markdown Viewports**: Displays plain-text recipe outcomes cleanly in a high-fidelity rendering panel.

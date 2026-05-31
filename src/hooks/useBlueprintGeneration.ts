@@ -26,7 +26,10 @@ interface UseBlueprintGenerationProps {
     bpOrResult: any,
     mode: 'gemini' | 'mock',
     activeTab: string,
-    recipeId?: string
+    recipeId?: string,
+    sparkTitle?: string,
+    sparkNovelty?: 'practical' | 'unusual' | 'black-swan',
+    sparkTags?: string[]
   ) => void;
 }
 
