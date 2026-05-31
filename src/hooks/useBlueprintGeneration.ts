@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { PromptBlueprint, ConversationHistoryRow, validateBlueprint, PromptRecipeId, GenericRecipeResult } from '../types';
+import { PromptBlueprint, ConversationHistoryRow, validateBlueprint, PromptRecipeId, GenericRecipeResult, ProjectContextPack } from '../types';
 import { MOCK_MALFORMED_BLUEPRINT } from '../mockData';
 import { recursiveSanitize } from '../lib/sanitize';
 import { getRecipeById } from '../lib/promptRecipes/registry';
@@ -96,7 +96,8 @@ export function useBlueprintGeneration({
     projectContext: string,
     historyRows: ConversationHistoryRow[],
     activeTab: string,
-    refinementProfile: string
+    refinementProfile: string,
+    projectPack?: ProjectContextPack
   ) => {
     if (!rawPrompt.trim()) {
       showToast('Please enter a raw prompt first.');
@@ -126,7 +127,7 @@ export function useBlueprintGeneration({
       setTimeout(() => {
         clearInterval(interval);
         try {
-          const mockOutcome = recipe.mockGenerator(rawPrompt, projectContext, refinementProfile);
+          const mockOutcome = recipe.mockGenerator(rawPrompt, projectContext, refinementProfile, projectPack);
 
           if (selectedRecipeId === 'blueprint') {
             let candidateBlueprint: any;
@@ -187,6 +188,7 @@ export function useBlueprintGeneration({
             mode: forceValidationError ? 'mock' : 'gemini',
             recipeId: selectedRecipeId,
             refinementProfile,
+            projectPack,
             settings: {
               model,
               temperature,
@@ -254,7 +256,8 @@ export function useBlueprintGeneration({
     projectContext: string,
     historyRows: ConversationHistoryRow[],
     activeTab: string,
-    refinementProfile: string
+    refinementProfile: string,
+    projectPack?: ProjectContextPack
   ) => {
     if (!blueprint) return;
 
@@ -300,6 +303,7 @@ export function useBlueprintGeneration({
         rejectedAssumptions: rejected,
         mode: generationMode,
         refinementProfile,
+        projectPack,
         settings: {
           model,
           temperature,

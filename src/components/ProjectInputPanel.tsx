@@ -5,6 +5,8 @@
 
 import React, { useRef, useState } from 'react';
 import { Sparkles, RotateCcw, Upload, Trash2, Folder, BookOpen, AlertTriangle } from 'lucide-react';
+import { ProjectContextPack } from '../types';
+import { ProjectPackSelector } from './ProjectPackSelector';
 
 interface ProjectInputPanelProps {
   projectName: string;
@@ -25,6 +27,18 @@ interface ProjectInputPanelProps {
   onClear: () => void;
   onSubmit: (e: React.FormEvent) => void;
   showToast: (msg: string) => void;
+
+  // Project Context Packs Props
+  projectPacks: ProjectContextPack[];
+  activePackId: string | null;
+  selectActivePack: (id: string | null) => void;
+  onCreateClick: () => void;
+  onEditClick: (id: string) => void;
+  onDuplicateClick: (id: string) => void;
+  onDeleteClick: (id: string) => void;
+  onExportClick: (id: string) => void;
+  onImportClick: (file: File) => void;
+  onApplyContext: (id: string) => void;
 }
 
 const DIRECTIONS = [
@@ -58,7 +72,17 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
   setGenerationMode,
   onClear,
   onSubmit,
-  showToast
+  showToast,
+  projectPacks,
+  activePackId,
+  selectActivePack,
+  onCreateClick,
+  onEditClick,
+  onDuplicateClick,
+  onDeleteClick,
+  onExportClick,
+  onImportClick,
+  onApplyContext
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -201,6 +225,18 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
           <label htmlFor="notes-context" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             3. Project Context / PDP / pasted notes <span className="text-[#D4AF37]">*</span>
           </label>
+          <ProjectPackSelector
+            projectPacks={projectPacks}
+            activePackId={activePackId}
+            selectActivePack={selectActivePack}
+            onCreateClick={onCreateClick}
+            onEditClick={onEditClick}
+            onDuplicateClick={onDuplicateClick}
+            onDeleteClick={onDeleteClick}
+            onExportClick={onExportClick}
+            onImportClick={onImportClick}
+            onApplyContext={onApplyContext}
+          />
           <textarea
             id="notes-context"
             rows={4}

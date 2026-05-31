@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { RefineryPipeline, PipelineStageResult, ConversationHistoryRow } from '../types';
+import { RefineryPipeline, PipelineStageResult, ConversationHistoryRow, ProjectContextPack } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
 
 interface UsePipelineWorkflowProps {
@@ -38,8 +38,8 @@ interface UsePipelineWorkflowProps {
 export type StageKey = 'projectRequest' | 'technicalSpec' | 'implementationPlan' | 'finalVibePrompt';
 
 const STAGE_RECIPES: Record<StageKey, { recipeId: string; label: string }> = {
-  projectRequest: { recipeId: 'idea_refinement', label: 'Project Request' },
-  technicalSpec: { recipeId: 'technical_spec', label: 'Technical Spec' },
+  projectRequest: { recipeId: 'idea_refinement', label: 'Project Request Specification' },
+  technicalSpec: { recipeId: 'technical_spec', label: 'Technical Specification' },
   implementationPlan: { recipeId: 'implementation_plan', label: 'Implementation Plan' },
   finalVibePrompt: { recipeId: 'final_vibe', label: 'Final Vibe Prompt' }
 };
@@ -151,7 +151,8 @@ export function usePipelineWorkflow({
     rawPrompt: string,
     baseContext: string,
     historyRows: ConversationHistoryRow[],
-    refinementProfile: string
+    refinementProfile: string,
+    projectPack?: ProjectContextPack
   ) => {
     if (!rawPrompt.trim()) {
       showToast('Please enter a raw prompt first.');
@@ -214,6 +215,7 @@ export function usePipelineWorkflow({
           mode: generationMode,
           recipeId,
           refinementProfile,
+          projectPack,
           settings: {
             model,
             temperature: stageKey === 'finalVibePrompt' ? 0.3 : temperature,

@@ -2,6 +2,25 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.08] - 2026-05-31
+
+### Added Project Context Packs (Phase 15)
+- Designed and built a full **Project Context Packs** system allowing users to save durable, reusable app profiles and inject them across every Prompt Refinery workflow.
+- Created the `ProjectContextPack` data schema in `src/types.ts` with fields for name, description, repo URL, tech stack, current status, design preferences, known issues, future roadmap ideas, important source files, and custom high-priority instructions.
+- Extended `WorkflowHistoryItem` interface with `activeProjectPackId`, `activeProjectPackName`, and `activeProjectPackSnapshot` snapshot fields to preserve pack context in run history.
+- Built `src/lib/projectPacks.ts` containing `serializePackToMarkdown` formatter, `validateProjectPack` shape checker, `sanitizeProjectPack` secret redactor, and a pre-baked "CloudMetrics Monitor" showcase demo pack for immediate testing.
+- Created `src/hooks/useProjectPacks.ts` custom hook with full CRUD operations (Create, Update, Delete, Duplicate), JSON export, JSON import with schema validation, and LocalStorage-backed persistence with corruption-safe error recovery and automatic fallback to the default demo pack.
+- Built `src/components/ProjectPackModal.tsx`, a premium gold-accented editor dialog with dedicated input controls for all pack schema fields, inline validation, and save/update logic.
+- Built `src/components/ProjectPackSelector.tsx`, a compact workspace widget with a dropdown pack selector, quick-action icon bar (Create, Edit, Duplicate, Delete, Export, Import, Apply), and an amber caution badge when the serialized pack context exceeds 10,000 characters.
+- Embedded `ProjectPackSelector` above the Project Context textarea in **New Prompt Mode** (`InputPanel.tsx`) and above the Notes field in **Iterative Project Mode** (`ProjectInputPanel.tsx`).
+- Wired the `useProjectPacks` hook, `ProjectPackModal`, and all handlers (apply, CRUD, import/export) into `src/App.tsx` including Append vs. Overwrite confirmation dialogs.
+- Extended `handleExportVibePacket` in `src/App.tsx` to include `activeProjectPackName`, `activeProjectPackId`, and `activeProjectPackContextUsed` fields inside exported Vibe Coding Packets.
+- Updated all four Express API routes (`/api/refine`, `/api/refine-loop`, `/api/project-ideas`, `/api/design-audit`, `/api/sparks`) in `server.ts` to parse `projectPack` from request payloads and inject compiled, critical-priority guidance blocks into Gemini model system instructions.
+- Added `compileProjectPackGuidance` helper function in `server.ts` that compiles pack fields (name, tech stack, current status, design preferences, known issues, roadmap, important files, and custom rules) into a structured system instruction block with CRITICAL and NOTE emphasis markers.
+- Updated `generateBlueprintForPrompt` in `src/mockData.ts` to accept `projectPack` as a fourth parameter and customize the returned mock blueprint title, architecture frontend field, developer notes, and final prompt with pack-specific tech stack, important files, known issues warnings, and custom rule headers.
+- Added optional `direction` field to the `ProjectImprovementResult` interface in `src/types.ts` to resolve a TypeScript narrowing issue in `loadProjectResult`.
+- Incremented footer version and `package.json` to version `v0.08`.
+
 ## [0.07] - 2026-05-31
 
 ### Added Prompt Quality Profiles (Phase 14)

@@ -356,6 +356,7 @@ export interface ProjectImprovementResult {
   risks_or_gaps: string[];
   suggested_improvements: SuggestedImprovement[];
   recommended_next_phase: string;
+  direction?: string;
 }
 
 export interface SuggestedIssue {
@@ -391,6 +392,22 @@ export interface DesignAuditResult {
   stylePreference?: string;
 }
 
+export interface ProjectContextPack {
+  id: string;
+  name: string;
+  description: string;
+  repoUrl: string;
+  techStack: string;
+  currentStatus: string;
+  designPreferences: string;
+  knownIssues: string;
+  futureIdeas: string;
+  importantFiles: string[];
+  customInstructions: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkflowHistoryItem {
   id: string;
   title: string;
@@ -412,5 +429,8 @@ export interface WorkflowHistoryItem {
   projectResult?: ProjectImprovementResult;
   designAuditResult?: DesignAuditResult;
   refinementProfile?: string;
+  activeProjectPackId?: string;
+  activeProjectPackName?: string;
+  activeProjectPackSnapshot?: string;
 }
 

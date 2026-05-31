@@ -4,12 +4,13 @@
 
 # Prompt Refinery
 
-**Version:** 0.07  
+**Version:** 0.08  
 Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
 
 
 ## Features
-- **Prompt Quality Profiles (NEW)**: Introduces 8 selectable refinement focuses (Balanced, Senior Engineer, UI/UX Designer, Product Strategist, Bugfix/Debug, Refactor/Optimization, PWA/Mobile, Black-Swan Creative) that dynamically tune Gemini system instructions and offline mocks to shape specifications for specific target agents.
+- **Project Context Packs (NEW)**: Save durable, reusable app profile packs (tech stack, status, known issues, design rules, future roadmap, important files, custom rules) and inject them directly into any workflow context. Supports full CRUD, JSON import/export, size warnings, and automatic Gemini system instruction injection.
+- **Prompt Quality Profiles**: Introduces 8 selectable refinement focuses (Balanced, Senior Engineer, UI/UX Designer, Product Strategist, Bugfix/Debug, Refactor/Optimization, PWA/Mobile, Black-Swan Creative) that dynamically tune Gemini system instructions and offline mocks to shape specifications for specific target agents.
 - **Design Audit Mode**: Evaluates UI layouts, visual style preferences, current issues, target devices, and pasted CSS against 17 core design and accessibility guidelines (WCAG AA contrast, HSL grids, prefers-reduced-motion queries). Returns overall scores, 7 detailed rating dimensions, positive strengths, categorized issue cards with severities, quick wins checkboxes, and copy-paste-ready master prompts.
 - **Iterative Project Mode**: Contextual codebase optimizer accepting project names, GitHub URLs, text notes, and text/markdown/json files (<200KB) to suggest improvements, identify risks, and construct copy-paste phase prompts with quick New-Prompt and Refinery-Pipeline triggers.
 - **Multi-Stage Refinery Pipeline**: An advanced planning workspace that progressively refines rough ideas through four progressive phases: Project Request Spec → Technical Spec → Implementation Plan → Final Vibe Prompt, featuring timeline unlocks, step copying, and bulk document exporting.
@@ -18,12 +19,13 @@ Run and compile raw ideas into precision-crafted prompt blueprint stacks for cod
 
 ## 📖 Table of Contents
 1. [Core Features Walkthrough](#-core-features-walkthrough)
-   - [Prompt Quality Profiles](#1-prompt-quality-profiles-new)
-   - [Multi-Stage Refinery Pipeline](#2-multi-stage-refinery-pipeline)
-   - [Creative Spark Catalyst](#3-creative-spark-catalyst)
-   - [Quick Blueprint Mode & Refinement Loop](#4-quick-blueprint-mode--refinement-loop)
-   - [Design Audit Mode](#5-design-audit-mode)
-   - [Engine Settings & Security Diagnostics](#6-engine-settings--security-diagnostics)
+   - [Project Context Packs](#1-project-context-packs-new)
+   - [Prompt Quality Profiles](#2-prompt-quality-profiles)
+   - [Multi-Stage Refinery Pipeline](#3-multi-stage-refinery-pipeline)
+   - [Creative Spark Catalyst](#4-creative-spark-catalyst)
+   - [Quick Blueprint Mode & Refinement Loop](#5-quick-blueprint-mode--refinement-loop)
+   - [Design Audit Mode](#6-design-audit-mode)
+   - [Engine Settings & Security Diagnostics](#7-engine-settings--security-diagnostics)
 2. [The Prompt Recipe Library (Deep Dive)](#-the-prompt-recipe-library-deep-dive)
    - [Quick Blueprint (`blueprint`)](#1-quick-blueprint-blueprint)
    - [Idea Refinement (`idea_refinement`)](#2-idea-refinement-idea_refinement)
@@ -40,7 +42,52 @@ Run and compile raw ideas into precision-crafted prompt blueprint stacks for cod
 
 ## 🚀 Core Features Walkthrough
 
-### 1. Prompt Quality Profiles (NEW)
+### 1. Project Context Packs (NEW)
+When vibe coding across multiple sessions on the same project, you constantly re-paste the same tech stack description, design rules, and known issues into every prompt context. **Project Context Packs** solve this by letting you save a complete app profile once, then inject it instantly into any workflow at any time.
+
+#### What a Pack Contains
+Each pack stores the following structured fields:
+- **Name** — The unique human-readable name identifying this project.
+- **Description** — A short summary of what the application does.
+- **GitHub Repo URL** — Optional link to the project repository.
+- **Tech Stack** — The exact framework combination (e.g. `React 19 + TypeScript + TailwindCSS v4 + Vite`). When specified, Gemini is instructed to tailor all output to this exact stack.
+- **Current Status** — Where the project currently stands (e.g. "Static layout completed. Working on live telemetry.").
+- **Design Preferences** — Visual style rules to enforce (e.g. "Charcoal dark mode, glassmorphism cards, 150ms transitions, HSL amber borders").
+- **Known Issues & Tech Debt** — Flagged problems that the model is instructed NOT to worsen (e.g. "Chart re-render loop under heavy datasets"). Marked CRITICAL in Gemini system prompts.
+- **Future Roadmap / Feature Ideas** — Planned improvements (e.g. "PWA offline support, local alert sounds") to keep suggestions forward-compatible.
+- **Important Source Files** — Key files to reference (e.g. `src/App.tsx`, `src/hooks/useTelemetry.ts`). Injected into mock developer notes and real Gemini context blocks.
+- **Custom High-Priority Instructions** — Override rules that take absolute priority over all recipe conventions (e.g. "Never rewrite entire files. Always modular. Accessible focus-visible outlines on all inputs"). Marked CRITICAL in Gemini system prompts.
+
+#### How to Use Packs
+1. Click **New Pack** inside the Project Context Pack selector widget (visible above the Project Context textarea in New Prompt Mode, and above the Notes field in Iterative Project Mode).
+2. Fill in the pack fields in the editor modal and click **Create Context Pack**.
+3. Select the saved pack from the dropdown to set it as active.
+4. Click **Apply Block** (📥) to serialize the pack as a formatted Markdown block directly into the active workspace context textarea. Choose Append or Overwrite if content is present.
+5. Generate your blueprint, pipeline, project analysis, or design audit — the active pack's tech stack, design rules, and custom instructions are automatically injected into every Gemini request as critical-priority system guidance.
+
+#### Action Bar Icons
+| Icon | Action |
+|------|--------|
+| ➕ New Pack | Opens the editor modal to create a new pack from scratch |
+| ⚙️ Edit | Opens the editor modal for the currently selected pack |
+| 🔁 Duplicate | Creates a copy of the active pack named `"[Name] Copy"` |
+| 🗑️ Delete | Permanently removes the pack (with confirmation) |
+| ⬇️ Export | Downloads the pack as a standalone `.json` file |
+| ⬆️ Import | Imports and validates a `.json` pack file, assigning it a fresh ID |
+| 📥 Apply Block | Injects a formatted Markdown summary of the pack into the context textarea |
+
+#### Use Cases
+- **Multi-session vibe coding**: Save your React + Tailwind project settings once, then generate a dozen different feature prompts over multiple sessions without re-typing stack details.
+- **Preventing tech debt escalation**: Documenting known issues in the pack means Gemini is explicitly instructed not to recommend approaches that conflict with those issues.
+- **Consistent design enforcement**: Storing your design token preferences ensures every generated blueprint, spec, or pipeline stage respects the same visual system.
+- **Team handoffs**: Export a pack as JSON and share it with collaborators so they start every Prompt Refinery session with the exact same project context.
+
+#### Storage & Safety
+All packs are stored in `localStorage` under `prompt_refinery_project_packs`. Loading is corruption-resilient with try-catch guards and automatic fallback to the built-in "CloudMetrics Monitor" demo pack. Packs are sanitized on save to redact common secret patterns. If the serialized pack text exceeds 10,000 characters, an amber warning badge is displayed advising of potential high API token usage.
+
+---
+
+### 2. Prompt Quality Profiles
 Sometimes a concise, practical prompt is needed; other times, a deep, security-heavy spec or a highly interactive UI roadmap is required. **Prompt Quality Profiles** modify how prompt recipes and workflows generate their outputs (New Prompt Mode, Refinery Pipeline, Iterative Project Mode, and Design Audit Mode) depending on the engineering or product focus, without modifying baseline JSON schemas.
 
 A global select dropdown is placed directly next to the **Workflow Mode selector tabs** inside the main right preview panel. Hovering over the dropdown displays a detailed CSS tooltip explaining the focus guidelines and system instructions of the active profile:

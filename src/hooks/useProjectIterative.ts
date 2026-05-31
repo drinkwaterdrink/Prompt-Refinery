@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { ProjectImprovementResult, ConversationHistoryRow } from '../types';
+import { ProjectImprovementResult, ConversationHistoryRow, ProjectContextPack } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
 
 interface UseProjectIterativeProps {
@@ -60,6 +60,7 @@ export function useProjectIterative({
     setProjectContext(originalContext || result.project_summary || '');
     setUploadedFileName('');
     setUploadedContextText('');
+    setDirection(result.direction || 'Find UI/UX improvements');
     setProjectResult(result);
     setProjectError(null);
   }, []);
@@ -67,7 +68,8 @@ export function useProjectIterative({
   const analyzeProject = useCallback(async (
     generationMode: 'mock' | 'gemini',
     settings: any,
-    refinementProfile: string
+    refinementProfile: string,
+    projectPack?: ProjectContextPack
   ) => {
     if (!projectName.trim()) {
       showToast('Please enter a project name.');
@@ -92,6 +94,7 @@ export function useProjectIterative({
           direction,
           mode: generationMode,
           refinementProfile,
+          projectPack,
           settings: {
             model: settings?.model,
             temperature: settings?.temperature,

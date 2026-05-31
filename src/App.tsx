@@ -13,10 +13,12 @@ import { useBlueprintGeneration } from './hooks/useBlueprintGeneration';
 import { usePipelineWorkflow } from './hooks/usePipelineWorkflow';
 import { useProjectIterative } from './hooks/useProjectIterative';
 import { useDesignAudit } from './hooks/useDesignAudit';
+import { useProjectPacks } from './hooks/useProjectPacks';
 import { copyToClipboardSafe } from './lib/clipboard';
 import { detectAndParseImport } from './lib/json';
 import { downloadJSON, downloadMarkdown } from './lib/exporters';
 import { REFINEMENT_PROFILES, getProfileById } from './lib/promptProfiles';
+import { serializePackToMarkdown } from './lib/projectPacks';
 
 // Components
 import { Toast } from './components/Toast';
@@ -32,11 +34,30 @@ import { ProjectInputPanel } from './components/ProjectInputPanel';
 import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
 import { DesignAuditInputPanel } from './components/DesignAuditInputPanel';
 import { DesignAuditWorkspace } from './components/DesignAuditWorkspace';
+import { ProjectPackModal } from './components/ProjectPackModal';
 import { SparkIdea } from './types';
 
 export default function App() {
   // Toast Alert hook
   const { toastMessage, showToast } = useToast();
+
+  // Project Context Packs hook
+  const {
+    projectPacks,
+    activePackId,
+    activePack,
+    selectActivePack,
+    createPack,
+    updatePack,
+    deletePack,
+    duplicatePack,
+    exportPackJSON,
+    importPackJSON
+  } = useProjectPacks(showToast);
+
+  // Pack modal state
+  const [isPackModalOpen, setIsPackModalOpen] = useState<boolean>(false);
+  const [editingPackId, setEditingPackId] = useState<string | null>(null);
 
   // Refinement profile state
   const [refinementProfile, setRefinementProfile] = useState<string>('balanced');
@@ -311,7 +332,7 @@ export default function App() {
       strictMode,
       browserApiKey,
       debugMode
-    }, refinementProfile);
+    }, refinementProfile, activePack || undefined);
   };
 
   const handleDesignSubmit = (e: React.FormEvent) => {
@@ -323,7 +344,7 @@ export default function App() {
       strictMode,
       browserApiKey,
       debugMode
-    }, refinementProfile);
+    }, refinementProfile, activePack || undefined);
   };
 
   const handleUseAsRawPrompt = (phasePrompt: string, projectSummary: string) => {
@@ -446,15 +467,49 @@ export default function App() {
     showToast(`Spark "${idea.title}" prepared for Idea Refinement recipe.`);
   };
 
+  // Apply pack context to textarea
+  const handleApplyPackContext = (packId: string) => {
+    const pack = projectPacks.find(p => p.id === packId);
+    if (!pack) return;
+    const markdown = serializePackToMarkdown(pack);
+    const currentMode = workflowMode;
+    if (currentMode === 'project') {
+      // ProjectInputPanel context (projectNotes)
+      if (projectNotes && projectNotes.trim()) {
+        const choice = confirm('Project context already has content.\n\n[OK] Append pack below existing content\n[Cancel] Overwrite with pack only');
+        if (choice) {
+          setProjectNotes(projectNotes + '\n\n' + markdown);
+        } else {
+          setProjectNotes(markdown);
+        }
+      } else {
+        setProjectNotes(markdown);
+      }
+    } else {
+      // InputPanel context (projectContext)
+      if (projectContext && projectContext.trim()) {
+        const choice = confirm('Project context already has content.\n\n[OK] Append pack below existing content\n[Cancel] Overwrite with pack only');
+        if (choice) {
+          setProjectContext(projectContext + '\n\n' + markdown);
+        } else {
+          setProjectContext(markdown);
+        }
+      } else {
+        setProjectContext(markdown);
+      }
+    }
+    showToast(`Applied context pack "${pack.name}" to workspace.`);
+  };
+
   // Enhance Prompt wrapper
   const handleEnhancePrompt = (e: React.FormEvent) => {
     e.preventDefault();
-    enhancePrompt(rawPrompt, projectContext, historyRows, activeTab, refinementProfile);
+    enhancePrompt(rawPrompt, projectContext, historyRows, activeTab, refinementProfile, activePack || undefined);
   };
 
   // Refine Blueprint wrapper
   const handleRefineBlueprint = () => {
-    refineBlueprint(rawPrompt, projectContext, historyRows, activeTab, refinementProfile);
+    refineBlueprint(rawPrompt, projectContext, historyRows, activeTab, refinementProfile, activePack || undefined);
   };
 
   // Clipboard Copier
@@ -494,7 +549,10 @@ export default function App() {
       functional_requirements_should_have: blueprint.functional_requirements?.should_have || [],
       developer_notes: blueprint.developer_notes || [],
       final_prompt: blueprint.final_prompt,
-      refinementProfile
+      refinementProfile,
+      activeProjectPackName: activePack?.name || null,
+      activeProjectPackId: activePack?.id || null,
+      activeProjectPackContextUsed: activePack ? serializePackToMarkdown(activePack) : null
     };
     downloadJSON(packet, `${blueprint.title.replace(/\s+/g, '_')}_vibe_coding_packet.json`);
     showToast("Exported complete Vibe Coding Packet.");
@@ -727,6 +785,16 @@ export default function App() {
             onClear={handleClear}
             onSubmit={handleProjectSubmit}
             showToast={showToast}
+            projectPacks={projectPacks}
+            activePackId={activePackId}
+            selectActivePack={selectActivePack}
+            onCreateClick={() => { setEditingPackId(null); setIsPackModalOpen(true); }}
+            onEditClick={(id) => { setEditingPackId(id); setIsPackModalOpen(true); }}
+            onDuplicateClick={duplicatePack}
+            onDeleteClick={deletePack}
+            onExportClick={exportPackJSON}
+            onImportClick={(file) => importPackJSON(file)}
+            onApplyContext={handleApplyPackContext}
           />
         ) : workflowMode === 'design_audit' ? (
           <DesignAuditInputPanel
@@ -770,6 +838,16 @@ export default function App() {
             onClear={handleClear}
             onSubmit={handleEnhancePrompt}
             showToast={showToast}
+            projectPacks={projectPacks}
+            activePackId={activePackId}
+            selectActivePack={selectActivePack}
+            onCreateClick={() => { setEditingPackId(null); setIsPackModalOpen(true); }}
+            onEditClick={(id) => { setEditingPackId(id); setIsPackModalOpen(true); }}
+            onDuplicateClick={duplicatePack}
+            onDeleteClick={deletePack}
+            onExportClick={exportPackJSON}
+            onImportClick={(file) => importPackJSON(file)}
+            onApplyContext={handleApplyPackContext}
           />
         )}
 
@@ -998,7 +1076,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v0.07 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v0.08 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>
@@ -1039,6 +1117,15 @@ export default function App() {
         showApiKey={showApiKey}
         setShowApiKey={setShowApiKey}
         showToast={showToast}
+      />
+
+      {/* Project Context Pack Editor Modal */}
+      <ProjectPackModal
+        isOpen={isPackModalOpen}
+        onClose={() => { setIsPackModalOpen(false); setEditingPackId(null); }}
+        packToEdit={editingPackId ? (projectPacks.find(p => p.id === editingPackId) || null) : null}
+        onSave={(packData) => createPack(packData)}
+        onUpdate={(id, packData) => updatePack(id, packData)}
       />
 
       {/* Creative Spark Drawer Overlay */}

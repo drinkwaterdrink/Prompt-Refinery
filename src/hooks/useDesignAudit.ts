@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { DesignAuditResult, ConversationHistoryRow } from '../types';
+import { DesignAuditResult, ConversationHistoryRow, ProjectContextPack } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
 
 interface UseDesignAuditProps {
@@ -72,7 +72,8 @@ export function useDesignAudit({
   const analyzeDesign = useCallback(async (
     generationMode: 'mock' | 'gemini',
     settings: any,
-    refinementProfile: string
+    refinementProfile: string,
+    projectPack?: ProjectContextPack
   ) => {
     if (!projectName.trim()) {
       showToast('Please enter a project name.');
@@ -102,6 +103,7 @@ export function useDesignAudit({
           designNotes: designNotes.trim(),
           mode: generationMode,
           refinementProfile,
+          projectPack,
           settings: {
             model: settings?.model,
             temperature: settings?.temperature,

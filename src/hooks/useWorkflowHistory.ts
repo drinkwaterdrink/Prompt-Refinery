@@ -42,7 +42,10 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     pipeline?: any,
     projectResult?: any,
     designAuditResult?: any,
-    refinementProfile?: string
+    refinementProfile?: string,
+    activeProjectPackId?: string,
+    activeProjectPackName?: string,
+    activeProjectPackSnapshot?: string
   ) => {
     // Clean all inputs and output structures using the recursive sanitizer
     const cleanPrompt = recursiveSanitize(prompt);
@@ -53,6 +56,9 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     const cleanProjectResult = recursiveSanitize(projectResult);
     const cleanDesignAuditResult = recursiveSanitize(designAuditResult);
     const cleanRefinementProfile = refinementProfile ? recursiveSanitize(refinementProfile) : undefined;
+    const cleanActiveProjectPackId = activeProjectPackId ? recursiveSanitize(activeProjectPackId) : undefined;
+    const cleanActiveProjectPackName = activeProjectPackName ? recursiveSanitize(activeProjectPackName) : undefined;
+    const cleanActiveProjectPackSnapshot = activeProjectPackSnapshot ? recursiveSanitize(activeProjectPackSnapshot) : undefined;
 
     const isBlueprint = type !== 'pipeline' && type !== 'project' && type !== 'design_audit' && bpOrResult && ('schema_version' in bpOrResult || !('content' in bpOrResult));
     
@@ -96,7 +102,10 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       pipeline: type === 'pipeline' ? cleanPipeline : undefined,
       projectResult: type === 'project' ? cleanProjectResult : undefined,
       designAuditResult: type === 'design_audit' ? cleanDesignAuditResult : undefined,
-      refinementProfile: cleanRefinementProfile
+      refinementProfile: cleanRefinementProfile,
+      activeProjectPackId: cleanActiveProjectPackId,
+      activeProjectPackName: cleanActiveProjectPackName,
+      activeProjectPackSnapshot: cleanActiveProjectPackSnapshot
     };
 
     setWorkflowHistory((prev) => {

@@ -32,7 +32,7 @@ export const blueprintRecipe: PromptRecipe = {
     payload += `Structure your output exactly matching the described schema version '1.0'. Generate NO other text.`;
     return payload;
   },
-  mockGenerator: (rawPrompt, projectContext, refinementProfile) => {
-    return generateBlueprintForPrompt(rawPrompt, projectContext, refinementProfile);
+  mockGenerator: (rawPrompt, projectContext, refinementProfile, projectPack) => {
+    return generateBlueprintForPrompt(rawPrompt, projectContext, refinementProfile, projectPack);
   }
 };

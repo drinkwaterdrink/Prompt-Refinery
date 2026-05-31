@@ -314,7 +314,7 @@ export const MOCK_MALFORMED_BLUEPRINT: any = {
   final_prompt: "" // Error: must not be empty
 };
 
-export const generateBlueprintForPrompt = (prompt: string, context?: string, refinementProfile?: string): PromptBlueprint => {
+export const generateBlueprintForPrompt = (prompt: string, context?: string, refinementProfile?: string, projectPack?: any): PromptBlueprint => {
   const normalized = prompt.toLowerCase();
   let base: PromptBlueprint;
   
@@ -490,6 +490,32 @@ export const generateBlueprintForPrompt = (prompt: string, context?: string, ref
     blueprint.title = `[${formattedLabel}] ${blueprint.title}`;
     blueprint.summary = `${blueprint.summary} (Refined for profile: ${refinementProfile}).`;
     blueprint.final_prompt = `[${formattedLabel} STYLE]\n\n${blueprint.final_prompt}`;
+  }
+
+  if (projectPack) {
+    blueprint.title = `[Pack: ${projectPack.name}] ${blueprint.title}`;
+    blueprint.summary = `${blueprint.summary} (Injected active context pack: ${projectPack.name}).`;
+    
+    if (projectPack.techStack) {
+      blueprint.architecture.frontend = projectPack.techStack;
+      blueprint.architecture.backend = "None (Client-side execution matching pack configuration)";
+    }
+    
+    if (projectPack.importantFiles && projectPack.importantFiles.length > 0) {
+      blueprint.developer_notes = [
+        `Target Source Files: ${projectPack.importantFiles.join(', ')}`,
+        ...(blueprint.developer_notes || [])
+      ];
+    }
+
+    if (projectPack.knownIssues) {
+      blueprint.developer_notes = [
+        ...(blueprint.developer_notes || []),
+        `Avoid aggravating known issue: ${projectPack.knownIssues}`
+      ];
+    }
+    
+    blueprint.final_prompt = `[ACTIVE PROJECT CONTEXT: ${projectPack.name}]\n[TECH STACK: ${projectPack.techStack || 'Agnostic'}]\n[CUSTOM RULES: ${projectPack.customInstructions || 'None'}]\n\n${blueprint.final_prompt}`;
   }
 
   return blueprint;

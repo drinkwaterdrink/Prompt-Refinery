@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { Sparkles, Trash2, Plus, ChevronDown, ChevronUp, ShieldAlert, RefreshCw, RotateCcw, BookOpen } from 'lucide-react';
-import { ConversationHistoryRow } from '../types';
+import { ConversationHistoryRow, ProjectContextPack } from '../types';
+import { ProjectPackSelector } from './ProjectPackSelector';
 
 interface InputPanelProps {
   rawPrompt: string;
@@ -27,6 +28,18 @@ interface InputPanelProps {
   onClear: () => void;
   onSubmit: (e: React.FormEvent) => void;
   showToast: (msg: string) => void;
+  
+  // Project Context Packs Props
+  projectPacks: ProjectContextPack[];
+  activePackId: string | null;
+  selectActivePack: (id: string | null) => void;
+  onCreateClick: () => void;
+  onEditClick: (id: string) => void;
+  onDuplicateClick: (id: string) => void;
+  onDeleteClick: (id: string) => void;
+  onExportClick: (id: string) => void;
+  onImportClick: (file: File) => void;
+  onApplyContext: (id: string) => void;
 }
 
 export const InputPanel: React.FC<InputPanelProps> = ({
@@ -48,7 +61,17 @@ export const InputPanel: React.FC<InputPanelProps> = ({
   setSelectedRecipeId,
   onClear,
   onSubmit,
-  showToast
+  showToast,
+  projectPacks,
+  activePackId,
+  selectActivePack,
+  onCreateClick,
+  onEditClick,
+  onDuplicateClick,
+  onDeleteClick,
+  onExportClick,
+  onImportClick,
+  onApplyContext
 }) => {
 
   const addHistoryRow = () => {
@@ -202,6 +225,18 @@ export const InputPanel: React.FC<InputPanelProps> = ({
           <label htmlFor="project-context" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             2. Project Context & Constraints <span className="text-slate-600 font-normal italic">(Optional)</span>
           </label>
+          <ProjectPackSelector
+            projectPacks={projectPacks}
+            activePackId={activePackId}
+            selectActivePack={selectActivePack}
+            onCreateClick={onCreateClick}
+            onEditClick={onEditClick}
+            onDuplicateClick={onDuplicateClick}
+            onDeleteClick={onDeleteClick}
+            onExportClick={onExportClick}
+            onImportClick={onImportClick}
+            onApplyContext={onApplyContext}
+          />
           <textarea
             id="project-context"
             rows={3}
