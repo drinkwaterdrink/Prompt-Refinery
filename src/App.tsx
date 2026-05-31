@@ -689,7 +689,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v1.02 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v0.04 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>
