@@ -22,8 +22,8 @@ interface ProjectInputPanelProps {
   direction: string;
   setDirection: (val: string) => void;
   isGeneratingProject: boolean;
-  generationMode: 'mock' | 'gemini';
-  setGenerationMode: (mode: 'mock' | 'gemini') => void;
+  generationMode: 'mock' | 'gemini' | 'custom_openai';
+  setGenerationMode: (mode: 'mock' | 'gemini' | 'custom_openai') => void;
   onClear: () => void;
   onSubmit: (e: React.FormEvent) => void;
   showToast: (msg: string) => void;
@@ -153,35 +153,46 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
             Project Optimization Inputs
           </span>
           <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
-            {generationMode === 'mock' ? '🎭 Mock Engine' : '⚡ Gemini Engine'}
+            {generationMode === 'mock' ? '🎭 Mock Engine' : generationMode === 'gemini' ? '⚡ Gemini Engine' : '🔌 Custom Engine'}
           </span>
         </div>
 
         {/* Engine Selector */}
         <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-2 gap-2 bg-[#161616] p-1 rounded-xl border border-[#262626]">
+          <div className="grid grid-cols-3 gap-2 bg-[#161616] p-1 rounded-xl border border-[#262626]">
             <button
               type="button"
               onClick={() => setGenerationMode('mock')}
-              className={`py-2 text-xs font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
                 generationMode === 'mock'
                   ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
               }`}
             >
-              🎭 Mock Mode
+              🎭 Mock
             </button>
             <button
               type="button"
               onClick={() => setGenerationMode('gemini')}
-              className={`py-2 text-xs font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
                 generationMode === 'gemini'
                   ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
               }`}
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              Gemini API
+              <Sparkles className="h-3 w-3" />
+              Gemini
+            </button>
+            <button
+              type="button"
+              onClick={() => setGenerationMode('custom_openai')}
+              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
+                generationMode === 'custom_openai'
+                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
+              }`}
+            >
+              🔌 Custom API
             </button>
           </div>
         </div>

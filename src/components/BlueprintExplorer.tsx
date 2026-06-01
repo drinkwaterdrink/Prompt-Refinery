@@ -39,7 +39,7 @@ interface BlueprintExplorerProps {
   onExportJSON: () => void;
   onExportMarkdown: () => void;
   onExportVibePacket: () => void;
-  setGenerationMode: (mode: 'mock' | 'gemini') => void;
+  setGenerationMode: (mode: 'mock' | 'gemini' | 'custom_openai') => void;
   setGeminiError: (val: string | null) => void;
   debugMode: boolean;
 }
