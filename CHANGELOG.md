@@ -2,6 +2,29 @@
 
 All notable changes to the Prompt Refinery project will be documented in this file.
 
+## [0.11] - 2026-06-07
+
+### Added Codex /goal Contract Builder & Cybertech UI Refactor (Phase 18)
+- Designed and built the interactive side-drawer component **Codex /goal Contract Builder** ([GoalBuilderDrawer.tsx](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/components/GoalBuilderDrawer.tsx)) supporting structured generation, custom constraints adding, testing presets applying, and real-time Markdown compiled output copying.
+- Refactored the overall application theme to the **Obsidian Cybertech Theme** (primary electric cyan `#00e5ff` highlights, indigo secondary tones, and deep slate/dark panels) inside [index.css](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/index.css), removing Playfair Display serif elements in favor of clean, bold sans-serif geometric headers.
+- Hardened keyboard accessibility by implementing full tab focus trapping within active modal overlays ([SettingsModal.tsx](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/components/SettingsModal.tsx)) and global Escape key listeners ([App.tsx](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/App.tsx)) to close open drawers safely.
+- Added launcher trigger buttons inside [BlueprintExplorer.tsx](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/components/BlueprintExplorer.tsx), [ProjectWorkspace.tsx](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/components/ProjectWorkspace.tsx), and [DesignAuditWorkspace.tsx](file:///c:/Users/trent/antigravity/Prompt-Refinery/src/components/DesignAuditWorkspace.tsx) that pre-fill the goal builder drawer with metadata and contexts parsed from active sessions.
+- Verified TypeScript type safety (`npx tsc --noEmit`) and successful production bundling (`npm run build`).
+
+## [0.10] - 2026-06-01
+
+### Added Connection Profiles & Mobile/PWA Install Mode (Phase 17)
+- Designed and built a **Connection Profiles Manager** in the Settings panel supporting full CRUD actions (New, Save, Delete, Select) persisted client-side in browser `localStorage`.
+- Replaced split Base URL and Endpoint Path fields with a single, unified **API URL** input, resolving a primary user blocker for configuring Custom LLM providers.
+- Programmed automatic server/client endpoints resolution that handles custom endpoints such as NanoGPT and OpenRouter by auto-appending `/chat/completions` under the hood.
+- Implemented full **Progressive Web App (PWA)** standalone capabilities with custom Apple meta tags and a brand-themed web manifest.
+- Added a high-fidelity golden vector PWA logo (`public/icons/icon.svg`).
+- Developed a stale-while-revalidate service worker (`public/sw.js`) that caches the app shell, HTML, JS, CSS, and icons, while strictly ignoring dynamic API routes containing secrets.
+- Developed client-side local mock outcome compilers in `useBlueprintGeneration`, `usePipelineWorkflow`, `useProjectIterative`, `useDesignAudit` and sparks catalyst actions, enabling 100% offline workflow compilation.
+- Designed a live `/api/health` polling routine and top header network status diagnostic pill.
+- Polished responsive layouts for mobile viewports including sticky bottom action bars, floating copy buttons, and full-screen drawer overlays.
+- Achieved perfect type safety with zero warnings.
+
 ## [0.09] - 2026-05-31
 
 ### Added Provider Adapter System & Custom OpenAI-Compatible Endpoint (Phase 16)

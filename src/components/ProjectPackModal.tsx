@@ -109,8 +109,8 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
         
         {/* Header */}
         <div className="p-5 border-b border-[#1F1F1F] flex items-center justify-between bg-[#161616]/50">
-          <div className="flex items-center gap-2.5 text-[#D4AF37]">
-            <FolderGit className="h-5 w-5 text-[#D4AF37]" />
+          <div className="flex items-center gap-2.5 text-primary">
+            <FolderGit className="h-5 w-5 text-primary" />
             <h3 className="font-serif font-bold text-base italic" id="pack-modal-title">
               {packToEdit ? 'Edit Context Pack' : 'Create Context Pack'}
             </h3>
@@ -145,7 +145,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="e.g. CloudMetrics Monitor"
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-mono"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-mono"
                 required
               />
             </div>
@@ -159,7 +159,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 value={repoUrl}
                 onChange={e => setRepoUrl(e.target.value)}
                 placeholder="https://github.com/username/repo"
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-mono"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-mono"
               />
             </div>
           </div>
@@ -173,7 +173,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Provide a quick overview of what this application does..."
-              className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-sans"
+              className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-sans"
             />
           </div>
 
@@ -188,7 +188,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 value={techStack}
                 onChange={e => setTechStack(e.target.value)}
                 placeholder="e.g. React 19 + TypeScript + TailwindCSS"
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-mono"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-mono"
               />
             </div>
 
@@ -201,7 +201,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 value={currentStatus}
                 onChange={e => setCurrentStatus(e.target.value)}
                 placeholder="e.g. Static layout completed, starting on database..."
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-sans"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-sans"
               />
             </div>
           </div>
@@ -217,7 +217,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 onChange={e => setDesignPreferences(e.target.value)}
                 placeholder="e.g. Charcoal dark mode, 8px rounded corners, glassmorphism headers..."
                 rows={3}
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-sans resize-none"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-sans resize-none"
               />
             </div>
 
@@ -230,7 +230,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 onChange={e => setKnownIssues(e.target.value)}
                 placeholder="e.g. Memory leak in charts, slow initial database connection..."
                 rows={3}
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-sans resize-none"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-sans resize-none"
               />
             </div>
           </div>
@@ -246,7 +246,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 onChange={e => setFutureIdeas(e.target.value)}
                 placeholder="e.g. Offline support, multi-tenant workspace partitions..."
                 rows={3}
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-sans resize-none"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-sans resize-none"
               />
             </div>
 
@@ -259,7 +259,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
                 onChange={e => setImportantFilesRaw(e.target.value)}
                 placeholder="e.g. src/App.tsx, src/hooks/useTelemetry.ts"
                 rows={3}
-                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-mono resize-none"
+                className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-mono resize-none"
               />
             </div>
           </div>
@@ -274,7 +274,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
               onChange={e => setCustomInstructions(e.target.value)}
               placeholder="e.g. Do NOT rewrite whole files. Always prefer modular components. Maintain 100% accessible outline borders on all focused inputs."
               rows={3}
-              className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-[#D4AF37] transition font-sans resize-none"
+              className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 outline-none focus:border-primary transition font-sans resize-none"
             />
             <p className="text-[10px] text-slate-500 font-mono">
               These guidelines are injected directly into Gemini system prompts as high-priority constraints overriding all general conventions.
@@ -292,7 +292,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
             </button>
             <button
               type="submit"
-              className="bg-[#D4AF37] text-black font-bold text-xs px-5 py-2.5 rounded-xl transition hover:opacity-90 active:scale-98 shadow-md cursor-pointer flex items-center gap-1.5"
+              className="bg-primary text-black font-bold text-xs px-5 py-2.5 rounded-xl transition hover:opacity-90 active:scale-98 shadow-md cursor-pointer flex items-center gap-1.5"
             >
               <Save className="h-4 w-4" />
               {packToEdit ? 'Save Changes' : 'Create Context Pack'}

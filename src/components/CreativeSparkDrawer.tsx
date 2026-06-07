@@ -40,12 +40,12 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
       <div className="absolute inset-0 cursor-pointer" onClick={onClose}></div>
       
       {/* Drawer body */}
-      <div className="relative w-full max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in">
+      <div className="relative w-full sm:max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in">
         
         {/* Header Section */}
         <div className="p-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#161616]/40">
-          <div className="flex items-center gap-2 text-[#D4AF37]">
-            <Sparkles className="h-4.5 w-4.5 text-[#D4AF37] animate-pulse" />
+          <div className="flex items-center gap-2 text-primary">
+            <Sparkles className="h-4.5 w-4.5 text-primary animate-pulse" />
             <h3 className="font-serif font-bold text-sm">Creative Spark Catalyst</h3>
           </div>
           <button
@@ -71,7 +71,7 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
                   onClick={() => onChangeNovelty(mode)}
                   className={`py-1 text-[10px] font-mono capitalize rounded-md transition cursor-pointer font-bold ${
                     selectedNovelty === mode
-                      ? 'bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/25'
+                      ? 'bg-primary/15 text-primary border border-primary/25'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/20 border border-transparent'
                   }`}
                 >
@@ -88,7 +88,7 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
               type="button"
               disabled={isGeneratingSparks}
               onClick={onRefreshSparks}
-              className="text-[10px] bg-[#D4AF37] hover:bg-[#C09E32] text-black font-mono font-bold uppercase py-1.5 px-3 rounded-md transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-[#D4AF37]/10"
+              className="text-[10px] bg-primary hover:bg-primary-hover text-black font-mono font-bold uppercase py-1.5 px-3 rounded-md transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-primary/10"
             >
               <RefreshCw className={`h-3 w-3 ${isGeneratingSparks ? 'animate-spin' : ''}`} />
               {isGeneratingSparks ? 'Catalyzing...' : 'Refresh Sparks'}
@@ -113,8 +113,8 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
 
           {isGeneratingSparks ? (
             <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-500 gap-3">
-              <RefreshCw className="h-8 w-8 text-[#D4AF37] animate-spin" />
-              <p className="text-xs font-mono font-bold uppercase tracking-widest text-[#D4AF37] animate-pulse">Catalyzing Sparks...</p>
+              <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+              <p className="text-xs font-mono font-bold uppercase tracking-widest text-primary animate-pulse">Catalyzing Sparks...</p>
               <p className="text-[10px] text-slate-600 italic">Iterating concepts in Google AI Studio sandbox</p>
             </div>
           ) : sparkIdeas.length === 0 ? (
@@ -124,7 +124,7 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
               <button
                 type="button"
                 onClick={onRefreshSparks}
-                className="mt-3 text-xs text-[#D4AF37] hover:text-[#C09E32] font-mono uppercase font-bold"
+                className="mt-3 text-xs text-primary hover:text-primary-hover font-mono uppercase font-bold"
               >
                 Refresh Catalyst
               </button>
@@ -134,12 +134,12 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
               {sparkIdeas.map((idea) => (
                 <div 
                   key={idea.id}
-                  className="bg-[#161616]/65 border border-[#262626] hover:border-[#D4AF37]/35 rounded-xl p-4 transition flex flex-col gap-3 shadow-md"
+                  className="bg-[#161616]/65 border border-[#262626] hover:border-primary/35 rounded-xl p-4 transition flex flex-col gap-3 shadow-md"
                 >
                   {/* Card Header metadata */}
                   <div className="flex items-start justify-between gap-2 border-b border-[#222222]/85 pb-2">
                     <div>
-                      <h4 className="font-serif font-bold text-[#D4AF37] text-sm italic">
+                      <h4 className="font-serif font-bold text-primary text-sm italic">
                         {idea.title}
                       </h4>
                       <div className="flex gap-1.5 mt-1 flex-wrap">
@@ -173,19 +173,19 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
                     <div className="bg-black/35 border border-[#1E1E1E] p-2.5 rounded-lg flex flex-col gap-2 font-mono text-[10px] leading-relaxed text-slate-400">
                       {idea.corePillars && idea.corePillars.length > 0 && (
                         <div>
-                          <strong className="text-[#D4AF37] uppercase text-[9px] block">Fused Pillars:</strong>
+                          <strong className="text-primary uppercase text-[9px] block">Fused Pillars:</strong>
                           <span className="text-slate-300">{idea.corePillars.join(" + ")}</span>
                         </div>
                       )}
                       {idea.catalystProblem && (
                         <div>
-                          <strong className="text-[#D4AF37] uppercase text-[9px] block">Catalyst Problem:</strong>
+                          <strong className="text-primary uppercase text-[9px] block">Catalyst Problem:</strong>
                           <span className="text-slate-300">{idea.catalystProblem}</span>
                         </div>
                       )}
                       {idea.whyNow && (
                         <div>
-                          <strong className="text-[#D4AF37] uppercase text-[9px] block">Why Now:</strong>
+                          <strong className="text-primary uppercase text-[9px] block">Why Now:</strong>
                           <span className="text-slate-300">{idea.whyNow}</span>
                         </div>
                       )}
@@ -197,14 +197,14 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => onRefineSpark(idea)}
-                      className="bg-[#0E0E0E] hover:bg-[#1E1E1E] border border-[#262626] hover:border-[#D4AF37]/30 text-slate-350 hover:text-slate-200 text-[10px] font-mono tracking-widest uppercase py-2 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                      className="bg-[#0E0E0E] hover:bg-[#1E1E1E] border border-[#262626] hover:border-primary/30 text-slate-350 hover:text-slate-200 text-[10px] font-mono tracking-widest uppercase py-2 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer font-bold"
                     >
-                      <BookOpen className="h-3 w-3 text-[#D4AF37]" /> Refine Idea
+                      <BookOpen className="h-3 w-3 text-primary" /> Refine Idea
                     </button>
                     <button
                       type="button"
                       onClick={() => onUseSpark(idea)}
-                      className="bg-[#D4AF37] hover:bg-[#C09E32] text-black text-[10px] font-mono tracking-widest uppercase py-2 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer font-bold shadow-md shadow-[#D4AF37]/5"
+                      className="bg-primary hover:bg-primary-hover text-black text-[10px] font-mono tracking-widest uppercase py-2 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer font-bold shadow-md shadow-primary/5"
                     >
                       <Sparkles className="h-3 w-3 text-black fill-black" /> Use Idea
                     </button>

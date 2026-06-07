@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ProjectImprovementResult, ConversationHistoryRow, ProjectContextPack } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
+import { getRecipeById } from '../lib/promptRecipes/registry';
 
 interface UseProjectIterativeProps {
   showToast: (msg: string) => void;
@@ -32,12 +33,28 @@ export function useProjectIterative({
   showToast,
   saveToWorkflowHistory
 }: UseProjectIterativeProps) {
-  const [projectName, setProjectName] = useState<string>('');
-  const [repoUrl, setRepoUrl] = useState<string>('');
-  const [projectContext, setProjectContext] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>(() => localStorage.getItem('prompt_refinery_project_name') || '');
+  const [repoUrl, setRepoUrl] = useState<string>(() => localStorage.getItem('prompt_refinery_repo_url') || '');
+  const [projectContext, setProjectContext] = useState<string>(() => localStorage.getItem('prompt_refinery_project_context_notes') || '');
   const [uploadedFileName, setUploadedFileName] = useState<string>('');
   const [uploadedContextText, setUploadedContextText] = useState<string>('');
-  const [direction, setDirection] = useState<string>('Find UI/UX improvements');
+  const [direction, setDirection] = useState<string>(() => localStorage.getItem('prompt_refinery_project_direction') || 'Find UI/UX improvements');
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_project_name', projectName);
+  }, [projectName]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_repo_url', repoUrl);
+  }, [repoUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_project_context_notes', projectContext);
+  }, [projectContext]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_project_direction', direction);
+  }, [direction]);
 
   const [isGeneratingProject, setIsGeneratingProject] = useState<boolean>(false);
   const [projectResult, setProjectResult] = useState<ProjectImprovementResult | null>(null);
@@ -79,6 +96,42 @@ export function useProjectIterative({
     setIsGeneratingProject(true);
     setProjectError(null);
     setProjectResult(null);
+
+    if (generationMode === 'mock') {
+      setTimeout(() => {
+        try {
+          const recipe = getRecipeById('code_review');
+          const mockOutcome = recipe.mockGenerator(projectName || 'My Project');
+          const sanitizedResult = recursiveSanitize(mockOutcome);
+          setProjectResult(sanitizedResult);
+          
+          saveToWorkflowHistory(
+            `Goal: ${direction} in ${projectName.trim()}`,
+            projectContext.trim() + (uploadedFileName ? `\n(File: ${uploadedFileName})` : ""),
+            [],
+            null,
+            'mock',
+            'project',
+            'code_review',
+            undefined,
+            undefined,
+            undefined,
+            'project',
+            undefined,
+            sanitizedResult,
+            undefined,
+            refinementProfile
+          );
+
+          showToast('Code review and optimization plan generated successfully!');
+        } catch (err: any) {
+          setProjectError(err.message || 'Mock failed');
+          showToast('Failed to review project.');
+        }
+        setIsGeneratingProject(false);
+      }, 1200);
+      return;
+    }
 
     try {
       const response = await fetch('/api/project-ideas', {

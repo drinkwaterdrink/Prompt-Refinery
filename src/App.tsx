@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Sparkles, History, Upload, Settings, RotateCcw } from 'lucide-react';
 
-import { ConversationHistoryRow, WorkflowHistoryItem } from './types';
+import { ConversationHistoryRow, WorkflowHistoryItem, GoalContractData } from './types';
+import { ConnectionProfile } from './lib/providers/types';
 import { useToast } from './hooks/useToast';
 import { useWorkflowHistory } from './hooks/useWorkflowHistory';
 import { useBlueprintGeneration } from './hooks/useBlueprintGeneration';
@@ -32,6 +33,7 @@ import { PipelineWorkspace } from './components/PipelineWorkspace';
 import { ProjectWorkspace } from './components/ProjectWorkspace';
 import { ProjectInputPanel } from './components/ProjectInputPanel';
 import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
+import { GoalBuilderDrawer } from './components/GoalBuilderDrawer';
 import { DesignAuditInputPanel } from './components/DesignAuditInputPanel';
 import { DesignAuditWorkspace } from './components/DesignAuditWorkspace';
 import { ProjectPackModal } from './components/ProjectPackModal';
@@ -61,11 +63,20 @@ export default function App() {
 
   // Refinement profile state
   const [refinementProfile, setRefinementProfile] = useState<string>('balanced');
+  const activeQualityProfile = useMemo(() => getProfileById(refinementProfile), [refinementProfile]);
 
   // Input states
-  const [rawPrompt, setRawPrompt] = useState<string>('');
-  const [projectContext, setProjectContext] = useState<string>('');
+  const [rawPrompt, setRawPrompt] = useState<string>(() => localStorage.getItem('prompt_refinery_raw_prompt') || '');
+  const [projectContext, setProjectContext] = useState<string>(() => localStorage.getItem('prompt_refinery_project_context') || '');
   const [historyRows, setHistoryRows] = useState<ConversationHistoryRow[]>([]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_raw_prompt', rawPrompt);
+  }, [rawPrompt]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_project_context', projectContext);
+  }, [projectContext]);
   
   // UI toggles
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState<boolean>(true);
@@ -98,24 +109,156 @@ export default function App() {
   // Provider engines state
   const [generationMode, setGenerationMode] = useState<'mock' | 'gemini' | 'custom_openai'>('mock');
 
-  // Custom OpenAI compatible endpoint state
-  const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_base_url') || 'https://api.openrouter.ai');
-  const [customEndpointPath, setCustomEndpointPath] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_endpoint') || '/v1/chat/completions');
+  // Connection Profiles & Single API URL compatible states
+  const [connectionProfiles, setConnectionProfiles] = useState<ConnectionProfile[]>(() => {
+    const defaultProfiles: ConnectionProfile[] = [
+      {
+        id: 'default-gemini',
+        name: 'Gemini (Live)',
+        provider: 'gemini',
+        apiUrl: '',
+        apiKey: '',
+        model: 'gemini-3.5-flash',
+        customHeadersJson: '{}',
+        jsonMode: false
+      },
+      {
+        id: 'default-mock',
+        name: 'Offline Mock (Simulation)',
+        provider: 'mock',
+        apiUrl: '',
+        apiKey: '',
+        model: 'mock-model',
+        customHeadersJson: '{}',
+        jsonMode: false
+      },
+      {
+        id: 'default-openai',
+        name: 'OpenRouter Default',
+        provider: 'custom_openai',
+        apiUrl: 'https://api.openrouter.ai/api/v1',
+        apiKey: '',
+        model: 'deepseek/deepseek-v4-flash',
+        customHeadersJson: '{}',
+        jsonMode: true
+      },
+      {
+        id: 'nano-gpt',
+        name: 'NanoGPT',
+        provider: 'custom_openai',
+        apiUrl: 'https://nano-gpt.com/api/v1',
+        apiKey: '',
+        model: 'gpt-4o',
+        customHeadersJson: '{}',
+        jsonMode: false
+      }
+    ];
+
+    const saved = localStorage.getItem('prompt_refinery_connection_profiles');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as ConnectionProfile[];
+        const merged = [...parsed];
+        defaultProfiles.forEach(def => {
+          if (!merged.some(p => p.id === def.id)) {
+            merged.push(def);
+          }
+        });
+        return merged;
+      } catch (e) {
+        console.error("Failed to parse saved connection profiles:", e);
+      }
+    }
+    return defaultProfiles;
+  });
+
+  const [activeProfileId, setActiveProfileId] = useState<string>(() => {
+    return localStorage.getItem('prompt_refinery_active_profile_id') || 'default-openai';
+  });
+
+  const [customApiUrl, setCustomApiUrl] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_api_url') || 'https://api.openrouter.ai/api/v1');
   const [customApiKey, setCustomApiKey] = useState<string>('');
   const [customModel, setCustomModel] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_model') || 'openai/gpt-4o');
   const [customHeadersJson, setCustomHeadersJson] = useState<string>(() => sessionStorage.getItem('prompt_refinery_custom_headers') || '{}');
   const [customJsonMode, setCustomJsonMode] = useState<boolean>(() => sessionStorage.getItem('prompt_refinery_custom_json_mode') !== 'false');
 
   // Sync custom OpenAI settings to sessionStorage (excluding apiKey)
-  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_base_url', customBaseUrl); }, [customBaseUrl]);
-  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_endpoint', customEndpointPath); }, [customEndpointPath]);
+  useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_api_url', customApiUrl); }, [customApiUrl]);
   useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_model', customModel); }, [customModel]);
   useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_headers', customHeadersJson); }, [customHeadersJson]);
   useEffect(() => { sessionStorage.setItem('prompt_refinery_custom_json_mode', customJsonMode.toString()); }, [customJsonMode]);
 
+  // Sync connectionProfiles & activeProfileId to localStorage
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_connection_profiles', JSON.stringify(connectionProfiles));
+  }, [connectionProfiles]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_active_profile_id', activeProfileId);
+  }, [activeProfileId]);
+
+  // Dynamically load active profile's settings when activeProfileId changes
+  useEffect(() => {
+    const activeProf = connectionProfiles.find(p => p.id === activeProfileId);
+    if (activeProf) {
+      setCustomApiUrl(activeProf.apiUrl);
+      setCustomApiKey(activeProf.apiKey);
+      setCustomModel(activeProf.model);
+      setCustomHeadersJson(activeProf.customHeadersJson || '{}');
+      setCustomJsonMode(activeProf.jsonMode);
+      setGenerationMode(activeProf.provider);
+      if (activeProf.provider === 'gemini') {
+        setModel(activeProf.model);
+      }
+    }
+  }, [activeProfileId]);
+
+
+  // Network Connectivity & Health Polling
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'server_unavailable'>('online');
+
+  useEffect(() => {
+    const handleOnline = () => setNetworkStatus('online');
+    const handleOffline = () => setNetworkStatus('offline');
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    if (!navigator.onLine) {
+      setNetworkStatus('offline');
+    }
+
+    const checkHealth = async () => {
+      if (!navigator.onLine) {
+        setNetworkStatus('offline');
+        return;
+      }
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          setNetworkStatus('online');
+        } else {
+          setNetworkStatus('server_unavailable');
+        }
+      } catch (err) {
+        setNetworkStatus('server_unavailable');
+      }
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
+  }, []);
+
   const customOpenAI = {
-    baseUrl: customBaseUrl,
-    endpointPath: customEndpointPath,
+    apiUrl: customApiUrl,
+    baseUrl: '',
+    endpointPath: '',
     apiKey: customApiKey,
     model: customModel,
     customHeadersJson,
@@ -132,6 +275,11 @@ export default function App() {
   const [isGeneratingSparks, setIsGeneratingSparks] = useState<boolean>(false);
   const [activeSpark, setActiveSpark] = useState<SparkIdea | null>(null);
   const [geminiSparksError, setGeminiSparksError] = useState<string | null>(null);
+  const [sparksCache, setSparksCache] = useState<Record<'practical' | 'unusual' | 'black-swan', SparkIdea[] | null>>({
+    practical: null,
+    unusual: null,
+    'black-swan': null
+  });
 
   // Workflow history hook
   const {
@@ -144,7 +292,39 @@ export default function App() {
   } = useWorkflowHistory(showToast);
 
   // Workflow mode selector: blueprint vs pipeline vs project vs design_audit
-  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline' | 'project' | 'design_audit'>('blueprint');
+  const [workflowMode, setWorkflowMode] = useState<'blueprint' | 'pipeline' | 'project' | 'design_audit'>(() => {
+    return (localStorage.getItem('prompt_refinery_workflow_mode') as any) || 'blueprint';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_workflow_mode', workflowMode);
+  }, [workflowMode]);
+
+  // Goal Builder state variables
+  const [isGoalDrawerOpen, setIsGoalDrawerOpen] = useState<boolean>(false);
+  const [goalDrawerInitialData, setGoalDrawerInitialData] = useState<Partial<GoalContractData> | null>(null);
+
+  const handleOpenGoalBuilder = useCallback((data: Partial<GoalContractData>) => {
+    setGoalDrawerInitialData(data);
+    setIsGoalDrawerOpen(true);
+  }, []);
+
+  // Global Escape key listener to close drawer dialogs and sidebars
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isWorkflowSidebarOpen) setIsWorkflowSidebarOpen(false);
+        if (isPackModalOpen) {
+          setIsPackModalOpen(false);
+          setEditingPackId(null);
+        }
+        if (isSparkDrawerOpen) setIsSparkDrawerOpen(false);
+        if (isGoalDrawerOpen) setIsGoalDrawerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isWorkflowSidebarOpen, isPackModalOpen, isSparkDrawerOpen, isGoalDrawerOpen]);
 
   // Wrapper for saving to workflow runs history
   const handleSaveToWorkflowHistory = (
@@ -424,9 +604,32 @@ export default function App() {
   };
 
   // Spark Catalyst actions
-  const fetchSparks = async (noveltyLevel: 'practical' | 'unusual' | 'black-swan') => {
+  const fetchSparks = async (noveltyLevel: 'practical' | 'unusual' | 'black-swan', forceRefresh = false) => {
+    if (!forceRefresh && sparksCache[noveltyLevel]) {
+      setSparkIdeas(sparksCache[noveltyLevel]!);
+      return;
+    }
+
     setIsGeneratingSparks(true);
     setGeminiSparksError(null);
+
+    if (generationMode === 'mock' || !navigator.onLine) {
+      setTimeout(async () => {
+        try {
+          const { generateLocalSparks } = await import('./lib/sparksMockGenerator');
+          const ideas = generateLocalSparks(4, noveltyLevel);
+          setSparkIdeas(ideas);
+          setSparksCache(prev => ({ ...prev, [noveltyLevel]: ideas }));
+          showToast('Served local mock sparks.');
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsGeneratingSparks(false);
+        }
+      }, 800);
+      return;
+    }
+
     try {
       const response = await fetch('/api/sparks', {
         method: 'POST',
@@ -448,17 +651,23 @@ export default function App() {
       });
       const result = await response.json();
       if (response.ok && result.ok) {
-        setSparkIdeas(result.ideas || []);
+        const ideas = result.ideas || [];
+        setSparkIdeas(ideas);
+        setSparksCache(prev => ({ ...prev, [noveltyLevel]: ideas }));
       } else {
+        const ideas = result.ideas || [];
         setGeminiSparksError(result.error || 'Server error generating spark ideas.');
-        setSparkIdeas(result.ideas || []); // Fallback mock ideas
+        setSparkIdeas(ideas); // Fallback mock ideas
+        setSparksCache(prev => ({ ...prev, [noveltyLevel]: ideas }));
         showToast('Using local mock sparks.');
       }
     } catch (err: any) {
       console.error("Sparks fetch error:", err);
       setGeminiSparksError('Network exception communicating with sparks engine.');
       const { generateLocalSparks } = await import('./lib/sparksMockGenerator');
-      setSparkIdeas(generateLocalSparks(4, noveltyLevel));
+      const ideas = generateLocalSparks(4, noveltyLevel);
+      setSparkIdeas(ideas);
+      setSparksCache(prev => ({ ...prev, [noveltyLevel]: ideas }));
       showToast('Served local mock sparks.');
     } finally {
       setIsGeneratingSparks(false);
@@ -469,7 +678,7 @@ export default function App() {
     if (isSparkDrawerOpen) {
       fetchSparks(sparkNovelty);
     }
-  }, [isSparkDrawerOpen, sparkNovelty]);
+  }, [isSparkDrawerOpen, sparkNovelty, sparksCache]);
 
   const handleUseSpark = (idea: SparkIdea) => {
     setRawPrompt(idea.rawPrompt);
@@ -542,32 +751,32 @@ export default function App() {
   };
 
   // Clipboard Copier
-  const handleCopy = async (text: string, label: string) => {
+  const handleCopy = useCallback(async (text: string, label: string) => {
     const success = await copyToClipboardSafe(text);
     if (success) {
       showToast(`Copied ${label} to clipboard!`);
     } else {
       showToast(`Failed to copy ${label} to clipboard.`);
     }
-  };
+  }, [showToast]);
 
   // Exports
-  const handleExportJSON = () => {
+  const handleExportJSON = useCallback(() => {
     if (!blueprint) return;
     const blueprintWithProfile = { ...blueprint, refinementProfile };
     downloadJSON(blueprintWithProfile, `${blueprint.title.replace(/\s+/g, '_')}_blueprint.json`);
-  };
+  }, [blueprint, refinementProfile]);
 
-  const handleExportMarkdown = () => {
+  const handleExportMarkdown = useCallback(() => {
     if (recipeResult) {
       downloadMarkdown(recipeResult.content, `${recipeResult.title.replace(/\s+/g, '_')}.md`);
       return;
     }
     if (!blueprint) return;
     downloadMarkdown(blueprint.final_prompt, `${blueprint.title.replace(/\s+/g, '_')}_final_prompt.md`);
-  };
+  }, [recipeResult, blueprint]);
 
-  const handleExportVibePacket = () => {
+  const handleExportVibePacket = useCallback(() => {
     if (!blueprint) return;
     const packet = {
       original_raw_prompt: rawPrompt,
@@ -585,7 +794,7 @@ export default function App() {
     };
     downloadJSON(packet, `${blueprint.title.replace(/\s+/g, '_')}_vibe_coding_packet.json`);
     showToast("Exported complete Vibe Coding Packet.");
-  };
+  }, [blueprint, rawPrompt, projectContext, historyRows, refinementProfile, activePack, showToast]);
 
   // Import JSON Loader
   const handleImportJSON = (file: File) => {
@@ -673,7 +882,7 @@ export default function App() {
   };
 
   // Clear workspace
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setRawPrompt('');
     setProjectContext('');
     setHistoryRows([]);
@@ -690,10 +899,10 @@ export default function App() {
     clearAudit();
     setRefinementProfile('balanced');
     showToast('Controls cleared.');
-  };
+  }, [clearPipeline, clearProject, clearAudit, showToast]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] font-sans text-slate-100 flex flex-col selection:bg-[#D4AF37]/30 selection:text-white" id="prompt-refinery-app">
+    <div className="min-h-screen bg-[#0A0A0A] font-sans text-slate-100 flex flex-col selection:bg-primary/30 selection:text-white" id="prompt-refinery-app">
       
       {/* Toast Alert Portal */}
       <Toast message={toastMessage} />
@@ -701,13 +910,39 @@ export default function App() {
       {/* Primary Header Segment */}
       <header className="border-b border-[#1F1F1F] bg-[#0E0E0E]/90 backdrop-blur sticky top-0 z-40 py-3.5 px-4 md:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="bg-[#161616] border border-[#262626] p-2.5 rounded-xl shadow-lg shadow-black/50 text-[#D4AF37]">
+          <div className="bg-[#161616] border border-[#262626] p-2.5 rounded-xl shadow-lg shadow-black/50 text-primary">
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="font-serif text-lg md:text-xl font-bold tracking-tight text-[#D4AF37] italic">
-              Prompt Refinery
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-sans text-base md:text-lg font-extrabold tracking-widest text-primary uppercase">
+                Prompt Refinery
+              </h1>
+              <div 
+                className={`text-[9px] font-semibold font-mono tracking-wider px-2 py-0.5 rounded-full border transition-all duration-300 flex items-center gap-1.5 ${
+                  networkStatus === 'online'
+                    ? 'bg-emerald-950/25 border-emerald-500/35 text-emerald-400'
+                    : networkStatus === 'offline'
+                    ? 'bg-red-950/25 border-red-500/35 text-rose-300 animate-pulse'
+                    : 'bg-amber-950/25 border-amber-500/35 text-amber-400'
+                }`}
+                title={networkStatus === 'online' 
+                  ? 'All services online & reachable.' 
+                  : networkStatus === 'offline'
+                  ? 'Offline mode active. Local mock catalog loaded.'
+                  : 'Server disconnected. Running on client mock engines.'
+                }
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  networkStatus === 'online' 
+                    ? 'bg-emerald-400' 
+                    : networkStatus === 'offline' 
+                    ? 'bg-red-400' 
+                    : 'bg-amber-400'
+                }`} />
+                {networkStatus === 'online' ? 'ONLINE' : networkStatus === 'offline' ? 'OFFLINE' : 'DISCONNECTED'}
+              </div>
+            </div>
             <p className="text-[9px] md:text-[10px] text-slate-500 font-mono tracking-widest uppercase">
               PRE-COMPILER FOR CODING AGENTS
             </p>
@@ -720,13 +955,13 @@ export default function App() {
           <button
             type="button"
             onClick={() => setIsWorkflowSidebarOpen(true)}
-            className="relative text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-[#D4AF37]/50 text-[#D4AF37] px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer"
+            className="relative text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-primary/50 text-primary px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Open saved workflow runs history panel"
           >
-            <History className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <History className="h-3.5 w-3.5 text-primary" />
             <span className="hidden md:inline">History</span>
             {workflowHistory.length > 0 && (
-              <span className="bg-[#D4AF37] text-black text-[9px] font-bold px-1.5 py-0.2 rounded-full font-mono">
+              <span className="bg-primary text-black text-[9px] font-bold px-1.5 py-0.2 rounded-full font-mono">
                 {workflowHistory.length}
               </span>
             )}
@@ -747,10 +982,10 @@ export default function App() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-300 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer"
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-300 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Import an existing blueprint JSON template"
           >
-            <Upload className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <Upload className="h-3.5 w-3.5 text-primary" />
             <span className="hidden md:inline">Import</span>
           </button>
 
@@ -760,10 +995,10 @@ export default function App() {
             id="settings-gear-button"
             onClick={() => setIsSettingsOpen(true)}
             aria-label="Open model customization and API key settings dialog"
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-[#D4AF37]/50 text-slate-300 hover:text-[#D4AF37] px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/75"
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-primary/50 text-slate-300 hover:text-primary px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/75"
             title="Open engine settings & custom credentials"
           >
-            <Settings className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <Settings className="h-3.5 w-3.5 text-primary" />
             <span className="hidden md:inline">Settings</span>
           </button>
 
@@ -772,18 +1007,19 @@ export default function App() {
           <button
             type="button"
             onClick={() => setIsSparkDrawerOpen(true)}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-[#D4AF37]/50 text-[#D4AF37] px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-primary/50 text-primary px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer shadow-sm focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Open Creative Spark Catalyst app idea generator drawer"
           >
-            <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span>Creative Spark</span>
           </button>
           
           <button
             type="button"
             onClick={handleClear}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 p-1.5 rounded-lg transition hover:text-white"
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 p-1.5 rounded-lg transition hover:text-white focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Reset All Inputs"
+            aria-label="Reset workspace inputs"
           >
             <RotateCcw className="h-4 w-4" />
           </button>
@@ -794,7 +1030,7 @@ export default function App() {
       <main className="flex-1 w-full max-w-[1700px] mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Side: Inputs and Controls Panel */}
-        {workflowMode === 'project' ? (
+        <div className={workflowMode === 'project' ? 'contents' : 'hidden'}>
           <ProjectInputPanel
             projectName={projectName}
             setProjectName={setProjectName}
@@ -825,7 +1061,9 @@ export default function App() {
             onImportClick={(file) => importPackJSON(file)}
             onApplyContext={handleApplyPackContext}
           />
-        ) : workflowMode === 'design_audit' ? (
+        </div>
+
+        <div className={workflowMode === 'design_audit' ? 'contents' : 'hidden'}>
           <DesignAuditInputPanel
             projectName={auditProjectName}
             setProjectName={setAuditProjectName}
@@ -846,7 +1084,9 @@ export default function App() {
             onSubmit={handleDesignSubmit}
             showToast={showToast}
           />
-        ) : (
+        </div>
+
+        <div className={(workflowMode === 'blueprint' || workflowMode === 'pipeline') ? 'contents' : 'hidden'}>
           <InputPanel
             rawPrompt={rawPrompt}
             setRawPrompt={setRawPrompt}
@@ -878,7 +1118,7 @@ export default function App() {
             onImportClick={(file) => importPackJSON(file)}
             onApplyContext={handleApplyPackContext}
           />
-        )}
+        </div>
 
         {/* Right Side: Generation Result / Output Preview Column */}
         <section className="lg:col-span-7 flex flex-col" id="right-preview-panel">
@@ -892,7 +1132,7 @@ export default function App() {
                 onClick={() => setWorkflowMode('blueprint')}
                 className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   workflowMode === 'blueprint'
-                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
                 }`}
               >
@@ -903,7 +1143,7 @@ export default function App() {
                 onClick={() => setWorkflowMode('pipeline')}
                 className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   workflowMode === 'pipeline'
-                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
                 }`}
               >
@@ -914,7 +1154,7 @@ export default function App() {
                 onClick={() => setWorkflowMode('project')}
                 className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   workflowMode === 'project'
-                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
                 }`}
               >
@@ -925,7 +1165,7 @@ export default function App() {
                 onClick={() => setWorkflowMode('design_audit')}
                 className={`text-[10px] md:text-xs px-3.5 py-2 rounded-lg font-bold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   workflowMode === 'design_audit'
-                    ? 'bg-[#D4AF37] text-black shadow-md font-extrabold'
+                    ? 'bg-primary text-black shadow-md font-extrabold'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-[#161616]'
                 }`}
               >
@@ -934,8 +1174,8 @@ export default function App() {
             </div>
 
             {/* Global Refinement Profile Selector Dropdown */}
-            <div className="relative group flex items-center gap-2 font-sans self-start sm:self-auto bg-[#111111] border border-[#1F1F1F] hover:border-[#D4AF37]/50 rounded-xl p-1 px-2.5 h-[42px] transition duration-200 shadow-md">
-              <span className="text-[10px] font-bold font-mono text-[#D4AF37] uppercase tracking-wider select-none">
+            <div className="relative group flex items-center gap-2 font-sans self-start sm:self-auto bg-[#111111] border border-[#1F1F1F] hover:border-primary/50 rounded-xl p-1 px-2.5 h-[42px] transition duration-200 shadow-md">
+              <span className="text-[10px] font-bold font-mono text-primary uppercase tracking-wider select-none">
                 Profile:
               </span>
               <select
@@ -955,14 +1195,14 @@ export default function App() {
 
               {/* Dynamic CSS Tooltip on Hover */}
               <div className="absolute right-0 bottom-full mb-2.5 hidden group-hover:block w-[300px] bg-[#161616] border border-[#262626] rounded-xl p-3 shadow-2xl z-50 text-xs animate-fade-in pointer-events-none">
-                <div className="text-[#D4AF37] font-bold font-mono uppercase tracking-wider text-[10px] mb-1">
-                  🎯 {getProfileById(refinementProfile).label} Focus
+                <div className="text-primary font-bold font-mono uppercase tracking-wider text-[10px] mb-1">
+                  🎯 {activeQualityProfile.label} Focus
                 </div>
                 <div className="text-slate-300 font-medium leading-relaxed">
-                  {getProfileById(refinementProfile).description}
+                  {activeQualityProfile.description}
                 </div>
                 <div className="mt-2 pt-2 border-t border-[#222222] text-slate-500 font-mono text-[9px] leading-normal italic">
-                  "{getProfileById(refinementProfile).instructionBlock.substring(0, 110)}..."
+                  "{activeQualityProfile.instructionBlock.substring(0, 110)}..."
                 </div>
               </div>
             </div>
@@ -970,7 +1210,7 @@ export default function App() {
 
           <div className="flex-1 bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl flex flex-col overflow-hidden min-h-[500px] shadow-2xl">
             
-            {workflowMode === 'project' ? (
+            <div className={workflowMode === 'project' ? 'flex flex-col flex-1' : 'hidden'}>
               <ProjectWorkspace
                 result={projectResult}
                 isGeneratingProject={isGeneratingProject}
@@ -979,8 +1219,11 @@ export default function App() {
                 onUseAsRawPrompt={handleUseAsRawPrompt}
                 onSendToPipeline={handleSendToPipeline}
                 showToast={showToast}
+                onOpenGoalBuilder={handleOpenGoalBuilder}
               />
-            ) : workflowMode === 'pipeline' ? (
+            </div>
+
+            <div className={workflowMode === 'pipeline' ? 'flex flex-col flex-1' : 'hidden'}>
               <PipelineWorkspace
                 pipeline={pipeline}
                 stageStatuses={stageStatuses}
@@ -993,53 +1236,57 @@ export default function App() {
                 generationMode={generationMode}
                 showToast={showToast}
               />
-            ) : workflowMode === 'design_audit' ? (
+            </div>
+
+            <div className={workflowMode === 'design_audit' ? 'flex flex-col flex-1' : 'hidden'}>
               <DesignAuditWorkspace
                 result={auditResult}
                 isGeneratingAudit={isGeneratingAudit}
                 auditError={auditError}
                 onCopy={handleCopy}
                 showToast={showToast}
+                onOpenGoalBuilder={handleOpenGoalBuilder}
               />
-            ) : (
-              <>
-                {!isGenerating && !blueprint && !recipeResult && !validationErrors && !geminiError && (
-                  <EmptyBlueprintState />
-                )}
+            </div>
 
-                {isGenerating && (
-                  <LoadingState generationStep={generationStep} />
-                )}
+            <div className={workflowMode === 'blueprint' ? 'flex flex-col flex-1' : 'hidden'}>
+              {!isGenerating && !blueprint && !recipeResult && !validationErrors && !geminiError && (
+                <EmptyBlueprintState />
+              )}
 
-                {!isGenerating && (blueprint || recipeResult || validationErrors || geminiError) && (
-                  <BlueprintExplorer
-                    blueprint={blueprint}
-                    recipeResult={recipeResult}
-                    validationErrors={validationErrors}
-                    geminiError={geminiError}
-                    rawOutput={rawOutput}
-                    isGenerating={isGenerating}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    rejectionStates={rejectionStates}
-                    setRejectionStates={setRejectionStates}
-                    isRefining={isRefining}
-                    refinementError={refinementError}
-                    revisionCount={revisionCount}
-                    lastRefined={lastRefined}
-                    onEnhancePrompt={handleEnhancePrompt}
-                    onRefineBlueprint={handleRefineBlueprint}
-                    onCopy={handleCopy}
-                    onExportJSON={handleExportJSON}
-                    onExportMarkdown={handleExportMarkdown}
-                    onExportVibePacket={handleExportVibePacket}
-                    setGenerationMode={setGenerationMode}
-                    setGeminiError={setGeminiError}
-                    debugMode={debugMode}
-                  />
-                )}
-              </>
-            )}
+              {isGenerating && (
+                <LoadingState generationStep={generationStep} />
+              )}
+
+              {!isGenerating && (blueprint || recipeResult || validationErrors || geminiError) && (
+                <BlueprintExplorer
+                  blueprint={blueprint}
+                  recipeResult={recipeResult}
+                  validationErrors={validationErrors}
+                  geminiError={geminiError}
+                  rawOutput={rawOutput}
+                  isGenerating={isGenerating}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  rejectionStates={rejectionStates}
+                  setRejectionStates={setRejectionStates}
+                  isRefining={isRefining}
+                  refinementError={refinementError}
+                  revisionCount={revisionCount}
+                  lastRefined={lastRefined}
+                  onEnhancePrompt={handleEnhancePrompt}
+                  onRefineBlueprint={handleRefineBlueprint}
+                  onCopy={handleCopy}
+                  onExportJSON={handleExportJSON}
+                  onExportMarkdown={handleExportMarkdown}
+                  onExportVibePacket={handleExportVibePacket}
+                  setGenerationMode={setGenerationMode}
+                  setGeminiError={setGeminiError}
+                  debugMode={debugMode}
+                  onOpenGoalBuilder={handleOpenGoalBuilder}
+                />
+              )}
+            </div>
 
           </div>
         </section>
@@ -1061,7 +1308,7 @@ export default function App() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[11px] leading-relaxed">
               <div>
                 <span className="text-slate-500 select-none block">Execution Mode:</span>
-                <span className="font-bold text-[#D4AF37] uppercase">{generationMode}</span>
+                <span className="font-bold text-primary uppercase">{generationMode}</span>
               </div>
               <div>
                 <span className="text-slate-500 select-none block">Active ID:</span>
@@ -1105,7 +1352,7 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v0.08 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v0.10 • Client Stage Sandbox</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
             <span>All logs isolated on local domain</span>
           </div>
@@ -1116,72 +1363,92 @@ export default function App() {
       </footer>
 
       {/* Sliding Workflow History Sidebar Overlay Drawer */}
-      <WorkflowHistorySidebar
-        isOpen={isWorkflowSidebarOpen}
-        onClose={() => setIsWorkflowSidebarOpen(false)}
-        workflowHistory={workflowHistory}
-        onLoadItem={handleLoadHistoryItem}
-        onDeleteItem={deleteWorkflowHistoryItem}
-        onClearAll={clearAllWorkflowHistory}
-      />
+      {isWorkflowSidebarOpen && (
+        <WorkflowHistorySidebar
+          isOpen={isWorkflowSidebarOpen}
+          onClose={() => setIsWorkflowSidebarOpen(false)}
+          workflowHistory={workflowHistory}
+          onLoadItem={handleLoadHistoryItem}
+          onDeleteItem={deleteWorkflowHistoryItem}
+          onClearAll={clearAllWorkflowHistory}
+        />
+      )}
 
       {/* Dynamic Settings and Credentials Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        generationMode={generationMode}
-        setGenerationMode={setGenerationMode}
-        model={model}
-        setModel={setModel}
-        temperature={temperature}
-        setTemperature={setTemperature}
-        maxOutputTokens={maxOutputTokens}
-        setMaxOutputTokens={setMaxOutputTokens}
-        strictMode={strictMode}
-        setStrictMode={setStrictMode}
-        debugMode={debugMode}
-        setDebugMode={setDebugMode}
-        browserApiKey={browserApiKey}
-        setBrowserApiKey={setBrowserApiKey}
-        showApiKey={showApiKey}
-        setShowApiKey={setShowApiKey}
-        showToast={showToast}
-        customBaseUrl={customBaseUrl}
-        setCustomBaseUrl={setCustomBaseUrl}
-        customEndpointPath={customEndpointPath}
-        setCustomEndpointPath={setCustomEndpointPath}
-        customApiKey={customApiKey}
-        setCustomApiKey={setCustomApiKey}
-        customModel={customModel}
-        setCustomModel={setCustomModel}
-        customHeadersJson={customHeadersJson}
-        setCustomHeadersJson={setCustomHeadersJson}
-        customJsonMode={customJsonMode}
-        setCustomJsonMode={setCustomJsonMode}
-      />
+      {isSettingsOpen && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          generationMode={generationMode}
+          setGenerationMode={setGenerationMode}
+          model={model}
+          setModel={setModel}
+          temperature={temperature}
+          setTemperature={setTemperature}
+          maxOutputTokens={maxOutputTokens}
+          setMaxOutputTokens={setMaxOutputTokens}
+          strictMode={strictMode}
+          setStrictMode={setStrictMode}
+          debugMode={debugMode}
+          setDebugMode={setDebugMode}
+          browserApiKey={browserApiKey}
+          setBrowserApiKey={setBrowserApiKey}
+          showApiKey={showApiKey}
+          setShowApiKey={setShowApiKey}
+          showToast={showToast}
+          customApiUrl={customApiUrl}
+          setCustomApiUrl={setCustomApiUrl}
+          customApiKey={customApiKey}
+          setCustomApiKey={setCustomApiKey}
+          customModel={customModel}
+          setCustomModel={setCustomModel}
+          customHeadersJson={customHeadersJson}
+          setCustomHeadersJson={setCustomHeadersJson}
+          customJsonMode={customJsonMode}
+          setCustomJsonMode={setCustomJsonMode}
+          connectionProfiles={connectionProfiles}
+          setConnectionProfiles={setConnectionProfiles}
+          activeProfileId={activeProfileId}
+          setActiveProfileId={setActiveProfileId}
+        />
+      )}
 
       {/* Project Context Pack Editor Modal */}
-      <ProjectPackModal
-        isOpen={isPackModalOpen}
-        onClose={() => { setIsPackModalOpen(false); setEditingPackId(null); }}
-        packToEdit={editingPackId ? (projectPacks.find(p => p.id === editingPackId) || null) : null}
-        onSave={(packData) => createPack(packData)}
-        onUpdate={(id, packData) => updatePack(id, packData)}
-      />
+      {isPackModalOpen && (
+        <ProjectPackModal
+          isOpen={isPackModalOpen}
+          onClose={() => { setIsPackModalOpen(false); setEditingPackId(null); }}
+          packToEdit={editingPackId ? (projectPacks.find(p => p.id === editingPackId) || null) : null}
+          onSave={(packData) => createPack(packData)}
+          onUpdate={(id, packData) => updatePack(id, packData)}
+        />
+      )}
 
       {/* Creative Spark Drawer Overlay */}
-      <CreativeSparkDrawer
-        isOpen={isSparkDrawerOpen}
-        onClose={() => setIsSparkDrawerOpen(false)}
-        sparkIdeas={sparkIdeas}
-        isGeneratingSparks={isGeneratingSparks}
-        selectedNovelty={sparkNovelty}
-        onChangeNovelty={setSparkNovelty}
-        onRefreshSparks={() => fetchSparks(sparkNovelty)}
-        onUseSpark={handleUseSpark}
-        onRefineSpark={handleRefineSpark}
-        geminiError={geminiSparksError}
-      />
+      {isSparkDrawerOpen && (
+        <CreativeSparkDrawer
+          isOpen={isSparkDrawerOpen}
+          onClose={() => setIsSparkDrawerOpen(false)}
+          sparkIdeas={sparkIdeas}
+          isGeneratingSparks={isGeneratingSparks}
+          selectedNovelty={sparkNovelty}
+          onChangeNovelty={setSparkNovelty}
+          onRefreshSparks={() => fetchSparks(sparkNovelty, true)}
+          onUseSpark={handleUseSpark}
+          onRefineSpark={handleRefineSpark}
+          geminiError={geminiSparksError}
+        />
+      )}
+
+      {/* Universal Codex /goal Contract Builder Drawer */}
+      {isGoalDrawerOpen && (
+        <GoalBuilderDrawer
+          isOpen={isGoalDrawerOpen}
+          onClose={() => setIsGoalDrawerOpen(false)}
+          initialData={goalDrawerInitialData}
+          showToast={showToast}
+        />
+      )}
 
     </div>
   );

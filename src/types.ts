@@ -434,3 +434,15 @@ export interface WorkflowHistoryItem {
   activeProjectPackSnapshot?: string;
 }
 
+export interface GoalContractData {
+  title: string;
+  objective: string;
+  includedAssets: string;
+  excludedAssets: string;
+  constraints: string[];
+  verificationCommand: string;
+  successMetric: string;
+  interruptionConditions: string;
+  maxIterations: number;
+}
+

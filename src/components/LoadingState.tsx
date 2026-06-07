@@ -17,9 +17,9 @@ export const LoadingState: React.FC<LoadingStateProps> = ({ generationStep }) =>
         
         {/* Glowing core pulse spinner */}
         <div className="relative">
-          <div className="w-16 h-16 border-2 border-[#D4AF37]/10 rounded-full animate-ping absolute"></div>
-          <div className="w-16 h-16 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#D4AF37]">
+          <div className="w-16 h-16 border-2 border-primary/10 rounded-full animate-ping absolute"></div>
+          <div className="w-16 h-16 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary">
             <RefreshCw className="h-5 w-5 animate-spin duration-3000" />
           </div>
         </div>
@@ -37,13 +37,13 @@ export const LoadingState: React.FC<LoadingStateProps> = ({ generationStep }) =>
         <div className="w-full bg-[#0A0A0A] border border-[#262626] rounded-xl p-4 flex flex-col gap-3 font-mono text-[11px]">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 tracking-wider">PIPELINE SEQUENCE:</span>
-            <span className="text-[#D4AF37] font-bold">{Math.round(((generationStep + 1) / 4) * 100)}%</span>
+            <span className="text-primary font-bold">{Math.round(((generationStep + 1) / 4) * 100)}%</span>
           </div>
           
           <div className="flex flex-col gap-1.5 mt-1 text-left">
             <div className="flex items-center gap-2">
               {generationStep >= 0 ? (
-                <span className={`${generationStep > 0 ? 'text-[#D4AF37]' : 'text-amber-400 animate-pulse'} font-bold`}>✓</span>
+                <span className={`${generationStep > 0 ? 'text-primary' : 'text-amber-400 animate-pulse'} font-bold`}>✓</span>
               ) : (
                 <span className="text-slate-700">○</span>
               )}
@@ -53,7 +53,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({ generationStep }) =>
             </div>
             <div className="flex items-center gap-2">
               {generationStep >= 1 ? (
-                <span className={`${generationStep > 1 ? 'text-[#D4AF37]' : 'text-amber-400 animate-pulse'} font-bold`}>✓</span>
+                <span className={`${generationStep > 1 ? 'text-primary' : 'text-amber-400 animate-pulse'} font-bold`}>✓</span>
               ) : (
                 <span className="text-slate-700">○</span>
               )}
@@ -63,7 +63,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({ generationStep }) =>
             </div>
             <div className="flex items-center gap-2">
               {generationStep >= 2 ? (
-                <span className={`${generationStep > 2 ? 'text-[#D4AF37]' : 'text-amber-400 animate-pulse'} font-bold`}>✓</span>
+                <span className={`${generationStep > 2 ? 'text-primary' : 'text-amber-400 animate-pulse'} font-bold`}>✓</span>
               ) : (
                 <span className="text-slate-700">○</span>
               )}

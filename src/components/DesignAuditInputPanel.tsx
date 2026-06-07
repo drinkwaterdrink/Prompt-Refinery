@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Sparkles, RotateCcw, Monitor, Smartphone, Layers, BookOpen } from 'lucide-react';
+import { EngineSelector } from './EngineSelector';
 
 interface DesignAuditInputPanelProps {
   projectName: string;
@@ -27,7 +28,7 @@ interface DesignAuditInputPanelProps {
   showToast: (msg: string) => void;
 }
 
-export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
+export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = React.memo(({
   projectName,
   setProjectName,
   uiDescription,
@@ -52,8 +53,8 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
       <form onSubmit={onSubmit} className="bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl md:p-5 p-4 flex flex-col gap-5 shadow-2xl">
         
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono font-bold tracking-widest text-[#D4AF37] uppercase flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
+          <span className="text-[10px] font-mono font-bold tracking-widest text-primary uppercase flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
             Design Audit Inputs
           </span>
           <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
@@ -62,49 +63,12 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
         </div>
 
         {/* Engine Selector */}
-        <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-3 gap-2 bg-[#161616] p-1 rounded-xl border border-[#262626]">
-            <button
-              type="button"
-              onClick={() => setGenerationMode('mock')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'mock'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              🎭 Mock
-            </button>
-            <button
-              type="button"
-              onClick={() => setGenerationMode('gemini')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'gemini'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              Gemini
-            </button>
-            <button
-              type="button"
-              onClick={() => setGenerationMode('custom_openai')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'custom_openai'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              🔌 Custom API
-            </button>
-          </div>
-        </div>
+        <EngineSelector generationMode={generationMode} setGenerationMode={setGenerationMode} />
 
         {/* 1. App/Project Name */}
         <div className="flex flex-col gap-2">
           <label htmlFor="project-name" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            1. Project/App Name <span className="text-[#D4AF37]">*</span>
+            1. Project/App Name <span className="text-primary">*</span>
           </label>
           <input
             id="project-name"
@@ -113,14 +77,14 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="e.g. TaskBoard Dashboard or GrowLog App"
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-sm font-sans rounded-lg p-2.5 text-slate-200 placeholder-slate-600 focus:outline-none transition-all duration-150"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-2.5 text-slate-200 placeholder-slate-600 focus:outline-none transition-all duration-150"
           />
         </div>
 
         {/* 2. Target Device */}
         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            2. Target Device / Platform <span className="text-[#D4AF37]">*</span>
+            2. Target Device / Platform <span className="text-primary">*</span>
           </label>
           <div className="grid grid-cols-3 gap-2 bg-[#161616] p-1 rounded-xl border border-[#262626]">
             <button
@@ -128,7 +92,7 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
               onClick={() => setTargetDevice('desktop')}
               className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
                 targetDevice === 'desktop'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
+                  ? 'bg-primary text-black font-bold border border-primary'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
               }`}
             >
@@ -139,7 +103,7 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
               onClick={() => setTargetDevice('mobile')}
               className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
                 targetDevice === 'mobile'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
+                  ? 'bg-primary text-black font-bold border border-primary'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
               }`}
             >
@@ -150,7 +114,7 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
               onClick={() => setTargetDevice('both')}
               className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
                 targetDevice === 'both'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
+                  ? 'bg-primary text-black font-bold border border-primary'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
               }`}
             >
@@ -162,7 +126,7 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
         {/* 3. UI Description */}
         <div className="flex flex-col gap-2">
           <label htmlFor="ui-description" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            3. UI Description / Screenshots described in text <span className="text-[#D4AF37]">*</span>
+            3. UI Description / Screenshots described in text <span className="text-primary">*</span>
           </label>
           <textarea
             id="ui-description"
@@ -171,72 +135,70 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
             value={uiDescription}
             onChange={(e) => setUiDescription(e.target.value)}
             placeholder="e.g. 'A dashboard layout featuring sidebar controls and a right panel viewport. Cards are styled with flat gray backgrounds, containing numbers and tiny gauges...'"
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
           />
         </div>
 
         {/* 4. Current Issues / Gaps */}
         <div className="flex flex-col gap-2">
           <label htmlFor="current-issues" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            4. Current UI/UX Issues & Bottlenecks <span className="text-slate-600 font-normal italic">(Optional)</span>
+            4. Known Gaps / Layout Pain Points <span className="text-slate-600 font-normal italic">(Optional)</span>
           </label>
           <textarea
             id="current-issues"
-            rows={2}
+            rows={3}
             value={currentIssues}
             onChange={(e) => setCurrentIssues(e.target.value)}
-            placeholder="e.g. 'Layout looks extremely cluttered on small tablets; contrast is low; buttons lack outline focus rings...'"
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
+            placeholder="e.g. 'The gauges are off-center on mobile viewports. Primary buttons do not have explicit hover changes...'"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
           />
         </div>
 
-        {/* 5. Visual Preference */}
+        {/* 5. Design Tone Preference */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="style-pref" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            5. Visual Style Preference / Accent Color <span className="text-slate-600 font-normal italic">(Optional)</span>
+          <label htmlFor="style-preference" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            5. Design Theme & Aesthetics Style <span className="text-primary">*</span>
           </label>
           <input
-            id="style-pref"
+            id="style-preference"
             type="text"
+            required
             value={stylePreference}
             onChange={(e) => setStylePreference(e.target.value)}
-            placeholder="e.g. Translucent HSL Amber Glassmorphism or Material Flat Blue"
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-sm font-sans rounded-lg p-2.5 text-slate-200 placeholder-slate-600 focus:outline-none transition-all duration-150"
+            placeholder="e.g. Charcoal dark mode, vibrant green highlights"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-2.5 text-slate-200 focus:outline-none transition-all duration-150"
           />
         </div>
 
-        {/* 6. Pasted CSS / Design Notes */}
+        {/* 6. Custom Spacing / Colors guidelines */}
         <div className="flex flex-col gap-2">
           <label htmlFor="design-notes" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            6. Pasted CSS / Layout Design Notes <span className="text-slate-600 font-normal italic">(Optional)</span>
+            6. Custom Design Guidelines / Tokens <span className="text-slate-600 font-normal italic">(Optional)</span>
           </label>
           <textarea
             id="design-notes"
             rows={3}
             value={designNotes}
             onChange={(e) => setDesignNotes(e.target.value)}
-            placeholder="Paste raw Tailwind class names, CSS variable files, or layout grid dimensions..."
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
+            placeholder="e.g. 'Colors: Primary HSL 220 80% 50%. Spacing: Multiples of 8px. Font: Inter.'"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
           />
         </div>
 
-        {/* Bottom Actions Frame */}
-        <div className="flex gap-3">
+        {/* Actions Footer */}
+        <div className="border-t border-[#1F1F1F] pt-4.5 flex gap-3 items-center">
           <button
             type="button"
             onClick={onClear}
-            className="flex-[1] bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-350 text-[10px] font-mono tracking-widest uppercase font-bold rounded-lg py-3 justify-center transition flex items-center gap-1.5 cursor-pointer"
+            className="text-xs bg-transparent border border-[#262626] text-slate-400 font-bold px-4 py-2.5 rounded-xl transition hover:text-white active:scale-98 cursor-pointer flex items-center gap-1.5 hover:bg-[#161616]"
+            title="Reset All Inputs"
           >
-            Clear
+            <RotateCcw className="h-4 w-4" /> Clear
           </button>
           <button
             type="submit"
             disabled={isGeneratingAudit || !projectName.trim() || !uiDescription.trim()}
-            className={`flex-[3] text-[10px] font-mono tracking-widest uppercase font-bold rounded-lg py-3 transition relative overflow-hidden flex items-center justify-center gap-1.5 cursor-pointer ${
-              !projectName.trim() || !uiDescription.trim()
-                ? 'bg-[#1E1E1E]/50 text-slate-600 border border-[#262626] cursor-not-allowed'
-                : 'bg-[#D4AF37] hover:bg-[#C09E32] text-black shadow-[0_0_20px_rgba(212,175,55,0.15)] font-semibold'
-            }`}
+            className="flex-1 bg-primary disabled:bg-slate-800 text-black disabled:text-slate-500 font-bold text-xs px-5 py-2.5 rounded-xl transition hover:opacity-90 active:scale-98 shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
           >
             {isGeneratingAudit ? (
               <>
@@ -245,7 +207,7 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5 text-black fill-black" />
+                <Sparkles className="h-3.5 w-3.5 text-black" />
                 <span>Trigger Design System Audit</span>
               </>
             )}
@@ -257,7 +219,7 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
       {/* Methodology Advice */}
       <div className="bg-[#0E0E0E]/50 border border-[#1F1F1F] rounded-xl p-4 text-xs text-slate-400 flex flex-col gap-2">
         <span className="font-bold text-slate-300 flex items-center gap-1 font-mono uppercase text-[10px] tracking-wider">
-          <BookOpen className="h-3.5 w-3.5 text-[#D4AF37]" /> Core Design Principles
+          <BookOpen className="h-3.5 w-3.5 text-primary" /> Core Design Principles
         </span>
         <p className="leading-relaxed text-[11px] text-slate-405">
           Reviews layouts against 8pt spacing systems, tokenized HSL colors, WCAG AA contrast standards, prefers-reduced-motion queries, focus outlines, mobile-first strategies, and rapid feedback states.
@@ -266,4 +228,4 @@ export const DesignAuditInputPanel: React.FC<DesignAuditInputPanelProps> = ({
 
     </section>
   );
-};
+});

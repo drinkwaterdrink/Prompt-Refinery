@@ -11,10 +11,7 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   RefreshCw, 
-  ChevronRight,
-  Sparkles,
-  Layers,
-  ArrowRight,
+  Layers, 
   ClipboardCheck
 } from 'lucide-react';
 import { RefineryPipeline, PipelineStageResult, ConversationHistoryRow } from '../types';
@@ -76,8 +73,7 @@ const STAGES: StageConfig[] = [
     description: 'Fuses all stages into an optimized prompt for coding agents.'
   }
 ];
-
-export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
+export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = React.memo(({
   pipeline,
   stageStatuses,
   stageErrors,
@@ -90,7 +86,6 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
   showToast
 }) => {
   const [copiedStage, setCopiedStage] = useState<string | null>(null);
-
   const handleStageCopy = (text: string, label: string, stageKey: string) => {
     onCopy(text, label);
     setCopiedStage(stageKey);
@@ -184,13 +179,13 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
       {/* Top Banner with Stats & Bulk Actions */}
       <div className="px-5 py-4 bg-slate-950/20 border-b border-[#1F1F1F] flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#D4AF37]/10 text-[#D4AF37] rounded-xl border border-[#D4AF37]/20">
+          <div className="p-2 bg-primary/10 text-primary rounded-xl border border-primary/20">
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-serif text-base font-bold text-[#D4AF37] italic">Multi-Stage Refinery Pipeline</h2>
+            <h2 className="font-serif text-base font-bold text-primary italic">Multi-Stage Refinery Pipeline</h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[10px] bg-[#161616] text-[#D4AF37] px-2 py-0.5 rounded border border-[#262626] font-mono font-semibold uppercase">
+              <span className="text-[10px] bg-[#161616] text-primary px-2 py-0.5 rounded border border-[#262626] font-mono font-semibold uppercase">
                 Pipeline Mode
               </span>
               <span className="text-slate-500 text-xs font-mono">
@@ -205,7 +200,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
             <button
               type="button"
               onClick={handleExportWholePipelineMarkdown}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider w-full sm:w-auto justify-center"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider w-full sm:w-auto justify-center"
               title="Export complete pipeline spec as a combined Markdown document"
             >
               <Download className="h-3.5 w-3.5" /> Export Spec Doc
@@ -213,7 +208,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
             <button
               type="button"
               onClick={handleExportWholePipelineJSON}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider w-full sm:w-auto justify-center"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider w-full sm:w-auto justify-center"
               title="Export entire pipeline history packet as JSON"
             >
               <Layers className="h-3.5 w-3.5" /> Export Pipeline JSON
@@ -239,11 +234,11 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                   status === 'complete' 
                     ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400'
                     : status === 'generating'
-                      ? 'bg-amber-950/40 border-[#D4AF37] text-[#D4AF37] animate-pulse'
+                      ? 'bg-amber-950/40 border-primary text-primary animate-pulse'
                       : status === 'error'
                         ? 'bg-rose-950/40 border-rose-500 text-rose-400'
                         : unlocked
-                          ? 'bg-[#161616] border-[#D4AF37]/35 text-slate-300 shadow-md'
+                          ? 'bg-[#161616] border-primary/35 text-slate-300 shadow-md'
                           : 'bg-[#111111] border-[#222222] text-slate-600 cursor-not-allowed'
                 }`}>
                   {status === 'complete' ? (
@@ -258,7 +253,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                     status === 'complete' 
                       ? 'bg-emerald-950/45 text-emerald-400 border border-emerald-900/30'
                       : status === 'generating'
-                        ? 'bg-amber-950/45 text-[#D4AF37] border border-amber-900/30'
+                        ? 'bg-amber-950/45 text-primary border border-amber-900/30'
                         : status === 'error'
                           ? 'bg-rose-950/45 text-rose-400 border border-rose-900/30'
                           : unlocked
@@ -284,11 +279,11 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
               {/* Main Card */}
               <div className={`flex-1 w-full bg-[#111111] border rounded-xl overflow-hidden transition-all duration-300 ${
                 status === 'generating' 
-                  ? 'border-[#D4AF37] shadow-[0_0_12px_rgba(212,175,55,0.1)]'
+                  ? 'border-primary shadow-[0_0_12px_rgba(212,175,55,0.1)]'
                   : status === 'complete'
                     ? 'border-emerald-500/20'
                     : unlocked
-                      ? 'border-[#262626] hover:border-[#D4AF37]/25'
+                      ? 'border-[#262626] hover:border-primary/25'
                       : 'border-[#1A1A1A] opacity-50'
               }`}>
                 
@@ -296,7 +291,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                 <div className="px-4 py-3.5 bg-black/40 border-b border-[#1F1F1F] flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                   <div>
                     <h3 className={`font-serif text-sm font-bold flex items-center gap-1.5 ${
-                      status === 'complete' ? 'text-emerald-400' : 'text-[#D4AF37]'
+                      status === 'complete' ? 'text-emerald-400' : 'text-primary'
                     }`}>
                       {st.title}
                     </h3>
@@ -310,7 +305,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                       status === 'complete' 
                         ? 'bg-emerald-950/45 text-emerald-400 border border-emerald-900/30'
                         : status === 'generating'
-                          ? 'bg-amber-950/45 text-[#D4AF37] border border-amber-900/30'
+                          ? 'bg-amber-950/45 text-primary border border-amber-900/30'
                           : status === 'error'
                             ? 'bg-rose-950/45 text-rose-400 border border-rose-900/30'
                             : unlocked
@@ -321,7 +316,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                         status === 'complete' 
                           ? 'bg-emerald-400 animate-pulse'
                           : status === 'generating'
-                            ? 'bg-[#D4AF37] animate-ping'
+                            ? 'bg-primary animate-ping'
                             : status === 'error'
                               ? 'bg-rose-500 animate-pulse'
                               : unlocked
@@ -343,8 +338,8 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                         disabled={status === 'generating'}
                         className={`text-[10px] border px-2.5 py-1.5 rounded-lg cursor-pointer transition-all duration-300 font-bold font-mono uppercase tracking-wider flex items-center gap-1 ${
                           status === 'complete'
-                            ? 'bg-[#161616] text-[#D4AF37] border-[#262626] hover:bg-[#222222]'
-                            : 'bg-[#D4AF37] text-black border-[#D4AF37] hover:bg-[#C09E32]'
+                            ? 'bg-[#161616] text-primary border-[#262626] hover:bg-[#222222]'
+                            : 'bg-primary text-black border-primary hover:bg-primary-hover'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {status === 'complete' ? (
@@ -366,13 +361,13 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                   {status === 'generating' ? (
                     <div className="py-8 flex flex-col items-center justify-center gap-3">
                       <div className="relative">
-                        <div className="h-10 w-10 rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37] animate-spin" />
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-[#D4AF37] font-semibold">
+                        <div className="h-10 w-10 rounded-full border-2 border-primary/20 border-t-[#00e5ff] animate-spin" />
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-primary font-semibold">
                           PR
                         </span>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs font-mono font-semibold text-[#D4AF37] uppercase tracking-wider">
+                        <p className="text-xs font-mono font-semibold text-primary uppercase tracking-wider">
                           Refining Stage {st.number}...
                         </p>
                         <p className="text-[10px] text-slate-500 mt-1 font-mono">
@@ -395,7 +390,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                         <button
                           type="button"
                           onClick={() => handleStageCopy(result.content, st.title, st.key)}
-                          className="text-[9px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] px-2.5 py-1 rounded-md transition inline-flex items-center gap-1 cursor-pointer font-bold font-mono uppercase tracking-wider"
+                          className="text-[9px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] px-2.5 py-1 rounded-md transition inline-flex items-center gap-1 cursor-pointer font-bold font-mono uppercase tracking-wider"
                         >
                           {copiedStage === st.key ? (
                             <>
@@ -403,16 +398,16 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3 w-3 text-[#D4AF37]" /> Copy Content
+                              <Copy className="h-3 w-3 text-primary" /> Copy Content
                             </>
                           )}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleStageExport(result, st.title)}
-                          className="text-[9px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] px-2.5 py-1 rounded-md transition inline-flex items-center gap-1 cursor-pointer font-bold font-mono uppercase tracking-wider"
+                          className="text-[9px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] px-2.5 py-1 rounded-md transition inline-flex items-center gap-1 cursor-pointer font-bold font-mono uppercase tracking-wider"
                         >
-                          <Download className="h-3 w-3 text-[#D4AF37]" /> Export Markdown
+                          <Download className="h-3 w-3 text-primary" /> Export Markdown
                         </button>
                       </div>
                       
@@ -434,7 +429,7 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center gap-1">
-                          <span className="text-[#D4AF37] opacity-60">Ready to Refine</span>
+                          <span className="text-primary opacity-60">Ready to Refine</span>
                           <span className="text-[10px] text-slate-600 font-mono max-w-sm leading-normal">
                             {st.description}
                           </span>
@@ -452,4 +447,4 @@ export const PipelineWorkspace: React.FC<PipelineWorkspaceProps> = ({
 
     </div>
   );
-};
+});

@@ -4,265 +4,42 @@
 
 # Prompt Refinery
 
-**Version:** 0.08  
-Run and compile raw ideas into precision-crafted prompt blueprint stacks for coding agents.  
-
-
-## Features
-- **Project Context Packs (NEW)**: Save durable, reusable app profile packs (tech stack, status, known issues, design rules, future roadmap, important files, custom rules) and inject them directly into any workflow context. Supports full CRUD, JSON import/export, size warnings, and automatic Gemini system instruction injection.
-- **Prompt Quality Profiles**: Introduces 8 selectable refinement focuses (Balanced, Senior Engineer, UI/UX Designer, Product Strategist, Bugfix/Debug, Refactor/Optimization, PWA/Mobile, Black-Swan Creative) that dynamically tune Gemini system instructions and offline mocks to shape specifications for specific target agents.
-- **Design Audit Mode**: Evaluates UI layouts, visual style preferences, current issues, target devices, and pasted CSS against 17 core design and accessibility guidelines (WCAG AA contrast, HSL grids, prefers-reduced-motion queries). Returns overall scores, 7 detailed rating dimensions, positive strengths, categorized issue cards with severities, quick wins checkboxes, and copy-paste-ready master prompts.
-- **Iterative Project Mode**: Contextual codebase optimizer accepting project names, GitHub URLs, text notes, and text/markdown/json files (<200KB) to suggest improvements, identify risks, and construct copy-paste phase prompts with quick New-Prompt and Refinery-Pipeline triggers.
-- **Multi-Stage Refinery Pipeline**: An advanced planning workspace that progressively refines rough ideas through four progressive phases: Project Request Spec → Technical Spec → Implementation Plan → Final Vibe Prompt, featuring timeline unlocks, step copying, and bulk document exporting.
+**Version:** 0.11  
+Prompt Refinery is a premium, high-fidelity developer workstation designed to run, compile, and refine raw software ideas into precision-crafted, structured prompt blueprint stacks. Engineered specifically for pairing with agentic coders (such as Antigravity, Cursor, or AI Studio), Prompt Refinery prevents tech debt, guarantees structural design system integrity, and maximizes agent speed and accuracy.
 
 ---
 
-## 📖 Table of Contents
-1. [Core Features Walkthrough](#-core-features-walkthrough)
-   - [Project Context Packs](#1-project-context-packs-new)
-   - [Prompt Quality Profiles](#2-prompt-quality-profiles)
-   - [Multi-Stage Refinery Pipeline](#3-multi-stage-refinery-pipeline)
-   - [Creative Spark Catalyst](#4-creative-spark-catalyst)
-   - [Quick Blueprint Mode & Refinement Loop](#5-quick-blueprint-mode--refinement-loop)
-   - [Design Audit Mode](#6-design-audit-mode)
-   - [Engine Settings & Security Diagnostics](#7-engine-settings--security-diagnostics)
-2. [The Prompt Recipe Library (Deep Dive)](#-the-prompt-recipe-library-deep-dive)
-   - [Quick Blueprint (`blueprint`)](#1-quick-blueprint-blueprint)
-   - [Idea Refinement (`idea_refinement`)](#2-idea-refinement-idea_refinement)
-   - [Technical Specification (`technical_spec`)](#3-technical-specification-technical_spec)
-   - [Implementation Plan (`implementation_plan`)](#4-implementation-plan-implementation_plan)
-   - [Code Review / Optimization (`code_review`)](#5-code-review--optimization-code_review)
-   - [Design Principles / Audit (`design_audit`)](#6-design-principles--audit-design_audit)
-   - [Black-Swan Ideation (`black_swan`)](#7-black-swan-ideation-black_swan)
-   - [Final Vibe Prompt (`final_vibe`)](#8-final-vibe-prompt-final_vibe)
-3. [Running Locally](#-running-locally)
-4. [Verification and Build Checks](#-verification-and-build-checks)
+## ⚡ Key Workflows & Features
+
+* **📋 Blueprint pre-compiler**: Compiles brief product prompts into comprehensive markdown blueprints detailing intent classifications, primary objectives, strict functional checklists, data entities, detailed interaction states, reliability criteria, and execution directives.
+* **⚙️ Multi-Stage Refinery Pipeline**: An advanced multi-milestone workspace that progressively refines concepts through four sequential, checklist-driven stages: *Project Request Spec* → *Technical Spec* → *Implementation Plan* → *Final Vibe Prompt*, offering step copying and bulk document exporting.
+* **🔍 Iterative Project Mode**: An active codebase optimizer that audits file context maps, directions, and repository details to output surgical checklists and single-step migration prompts.
+* **🎨 Design System Audit**: Evaluates layout maps, UI assets descriptions, and active CSS parameters against 17 systematic spacing, accessibility, and contrast rules (WCAG AA).
+* **💡 Creative Spark Catalyst**: Generates novel, defensive, and highly defensible MVP concepts tailored to stacks, difficulty, or custom novelty scales.
+* **📦 Project Context Packs**: Saves durable, reusable app profiles (tech stack, current status, known issues, roadmap, source files, custom rules) and injects them instantly into model prompts as high-priority system instructions.
+* **🔌 Connection Profiles Manager**: A client-side credential registry inside the Settings panel to create, save, select, and delete connection profiles (URL, keys, custom headers, JSON Mode) persisted in browser local storage for secure session continuity.
+* **🎯 Codex /goal Contract Builder**: An interactive universal exporter side-drawer that parses active workspace metadata (Blueprints, Roadmaps, or Design Audits) and generates verified 5-part machine-readable goal prompt contracts optimized for autonomous agentic execution.
 
 ---
 
-## 🚀 Core Features Walkthrough
+## 🛠️ The Tech Stack
 
-### 1. Project Context Packs (NEW)
-When vibe coding across multiple sessions on the same project, you constantly re-paste the same tech stack description, design rules, and known issues into every prompt context. **Project Context Packs** solve this by letting you save a complete app profile once, then inject it instantly into any workflow at any time.
-
-#### What a Pack Contains
-Each pack stores the following structured fields:
-- **Name** — The unique human-readable name identifying this project.
-- **Description** — A short summary of what the application does.
-- **GitHub Repo URL** — Optional link to the project repository.
-- **Tech Stack** — The exact framework combination (e.g. `React 19 + TypeScript + TailwindCSS v4 + Vite`). When specified, Gemini is instructed to tailor all output to this exact stack.
-- **Current Status** — Where the project currently stands (e.g. "Static layout completed. Working on live telemetry.").
-- **Design Preferences** — Visual style rules to enforce (e.g. "Charcoal dark mode, glassmorphism cards, 150ms transitions, HSL amber borders").
-- **Known Issues & Tech Debt** — Flagged problems that the model is instructed NOT to worsen (e.g. "Chart re-render loop under heavy datasets"). Marked CRITICAL in Gemini system prompts.
-- **Future Roadmap / Feature Ideas** — Planned improvements (e.g. "PWA offline support, local alert sounds") to keep suggestions forward-compatible.
-- **Important Source Files** — Key files to reference (e.g. `src/App.tsx`, `src/hooks/useTelemetry.ts`). Injected into mock developer notes and real Gemini context blocks.
-- **Custom High-Priority Instructions** — Override rules that take absolute priority over all recipe conventions (e.g. "Never rewrite entire files. Always modular. Accessible focus-visible outlines on all inputs"). Marked CRITICAL in Gemini system prompts.
-
-#### How to Use Packs
-1. Click **New Pack** inside the Project Context Pack selector widget (visible above the Project Context textarea in New Prompt Mode, and above the Notes field in Iterative Project Mode).
-2. Fill in the pack fields in the editor modal and click **Create Context Pack**.
-3. Select the saved pack from the dropdown to set it as active.
-4. Click **Apply Block** (📥) to serialize the pack as a formatted Markdown block directly into the active workspace context textarea. Choose Append or Overwrite if content is present.
-5. Generate your blueprint, pipeline, project analysis, or design audit — the active pack's tech stack, design rules, and custom instructions are automatically injected into every Gemini request as critical-priority system guidance.
-
-#### Action Bar Icons
-| Icon | Action |
-|------|--------|
-| ➕ New Pack | Opens the editor modal to create a new pack from scratch |
-| ⚙️ Edit | Opens the editor modal for the currently selected pack |
-| 🔁 Duplicate | Creates a copy of the active pack named `"[Name] Copy"` |
-| 🗑️ Delete | Permanently removes the pack (with confirmation) |
-| ⬇️ Export | Downloads the pack as a standalone `.json` file |
-| ⬆️ Import | Imports and validates a `.json` pack file, assigning it a fresh ID |
-| 📥 Apply Block | Injects a formatted Markdown summary of the pack into the context textarea |
-
-#### Use Cases
-- **Multi-session vibe coding**: Save your React + Tailwind project settings once, then generate a dozen different feature prompts over multiple sessions without re-typing stack details.
-- **Preventing tech debt escalation**: Documenting known issues in the pack means Gemini is explicitly instructed not to recommend approaches that conflict with those issues.
-- **Consistent design enforcement**: Storing your design token preferences ensures every generated blueprint, spec, or pipeline stage respects the same visual system.
-- **Team handoffs**: Export a pack as JSON and share it with collaborators so they start every Prompt Refinery session with the exact same project context.
-
-#### Storage & Safety
-All packs are stored in `localStorage` under `prompt_refinery_project_packs`. Loading is corruption-resilient with try-catch guards and automatic fallback to the built-in "CloudMetrics Monitor" demo pack. Packs are sanitized on save to redact common secret patterns. If the serialized pack text exceeds 10,000 characters, an amber warning badge is displayed advising of potential high API token usage.
+* **Frontend**: React 19, TypeScript, Lucide Icons, and Vanilla CSS.
+* **Styling**: TailwindCSS v4 configured with the Obsidian Cybertech Theme (electric cyan primary highlights and slate dark mode).
+* **Backend**: Node.js & Express.js.
+* **AI Engines Integration**: Google Gemini SDK & custom OpenAI-compatible endpoint router.
+* **Bundler & Compiler**: Vite (for client assets) and esbuild (for server compilation).
 
 ---
 
-### 2. Prompt Quality Profiles
-Sometimes a concise, practical prompt is needed; other times, a deep, security-heavy spec or a highly interactive UI roadmap is required. **Prompt Quality Profiles** modify how prompt recipes and workflows generate their outputs (New Prompt Mode, Refinery Pipeline, Iterative Project Mode, and Design Audit Mode) depending on the engineering or product focus, without modifying baseline JSON schemas.
-
-A global select dropdown is placed directly next to the **Workflow Mode selector tabs** inside the main right preview panel. Hovering over the dropdown displays a detailed CSS tooltip explaining the focus guidelines and system instructions of the active profile:
-
-1. **Balanced** (Default): High-quality pre-compilation review. Ensures a solid mix of functional specs, target audience mapping, standard layouts, and security/reliability patterns.
-2. **Senior Engineer**: Optimized for coding agents (Cursor, Antigravity). Emphasizes small, safe, incremental edits, files to inspect, technical risks, clear and testable acceptance criteria, and strictly warns against unnecessary rewrites.
-3. **UI/UX Designer**: Focuses on screen layout systems, smooth transition animations, micro-interactions, stateful styling, WCAG accessibility outlines, mobile touch-targets (>44px), and clear visual hierarchy.
-4. **Product Strategist**: Focuses on defining atomic MVP scopes, ordering backlog priorities, planning customer onboarding flows, and listing business value retention metrics.
-5. **Bugfix / Debug**: Emphasizes strict reproduction steps, suspected root causes, surgical minimal patches, diagnostics telemetry logging, and comprehensive regression prevention.
-6. **Refactor / Optimization**: Focuses on performance benchmarks, db query speeds, code maintainability indexes, atomic cleanup stages, and modular refactoring steps.
-7. **PWA / Mobile**: Focuses on offline cache service workers, LocalStorage offline data structures, fluid layouts, finger-friendly hit targets, viewport scaling, and lightweight mobile rendering.
-8. **Black-Swan Creative**: Focuses on maximum product novelty, gamified defensive mechanics, unconventional constraints, and first-principles creative pivots to incubation.
-
-The active profile is automatically synced to the LocalStorage sidebar runs list, restored when clicking past runs, and embedded inside exported JSON blueprints, Markdown files, Vibe coding packets, and timeline pipelines!
-
----
-
-### 2. Multi-Stage Refinery Pipeline
-The **Refinery Pipeline** is a premium sequential planning workstation. It transforms raw prompts progressively through four evolutionary stages, ensuring that by the time you start coding, every structural detail has been thoroughly mapped out.
-
-- **The Flow**: Stage 1 (Project Request Spec) $\rightarrow$ Stage 2 (Technical Spec) $\rightarrow$ Stage 3 (Implementation Plan) $\rightarrow$ Stage 4 (Final Vibe Prompt).
-- **Progressive Context Accumulation**: Each subsequent stage dynamically inherits the markdown specifications compiled in all preceding stages. When you trigger Stage 2, the pipeline hook automatically appends the Stage 1 Project Request markdown into the request context. By Stage 4, all specifications are fused.
-- **Sequential Unlock Gates**: Prerequisite checks prevent out-of-order execution. Stage $N$ is locked and protected until Stage $N-1$ is fully compiled.
-- **Timeline Cards**: Each stage card displays detailed subtitles, golden status badges, active pulse spinners, local scrollview viewports, rapid clipboard copying, and individual markdown file downloads.
-- **Bulk Exporters**: Users can export the entire pipeline progress as a single, combined master Markdown document or a full history JSON packet.
-
----
-
-### 3. Creative Spark Catalyst
-Designed for "vibe coding" sessions where you want to start a fresh project but need a high-novelty, buildable software concept.
-
-- **Generation Modes**: 
-  - **Practical**: Standard high-utility offline-first personal trackers, local logs, or developer utilities.
-  - **Unusual**: Niche tools, retro-inspired mechanics, relationship maps, lorebooks, or Web Audio synthesizers.
-  - **Black-Swan**: Defensible startup concepts fuzing 2-3 unrelated technical pillars, resolving a catalyst problem, and applying an unconventional constraint (e.g. ambient voice-first, ephemeral, zero-UI, deliberate friction).
-- **Zero-UI & Pillared Concepts**: Automatically populates catalysts, pillars, why-now indicators, and pre-fills raw prompts, contexts, and simulated chat histories inside the workspace.
-- **Interactive Drawer**: A slide-over sheet featuring novelty tabs, refresh buttons, and pillar badges. Selecting an idea pre-fills the workspace for manual review before triggering compilation.
-
----
-
-### 4. Quick Blueprint Mode & Refinement Loop
-The standard pre-compilation flow that translates a raw prompt into a unified JSON blueprint containing problem definitions, architectural layouts, and UX component structures.
-
-- **Unified Schema Dashboard**: Organizes outputs into tabbed panels detailing Overview, Requirements, Architecture, UX, Reliability, Final Prompt, and raw JSON code.
-- **Interactive Requirement Cards**: Displays core user objectives and infers implicit system assumptions.
-- **Assumption Refinement Revision Loop**: Users can review system assumptions, reject incorrect ones, type in manual corrections, and trigger a refinement cycle. The system revises the blueprint structure on the fly without losing unchanged sections.
-
----
-
-### 5. Design Audit Mode
-**Design Audit Mode** provides a comprehensive visual and technical design evaluation workstation. It assesses frontend layouts against modern web aesthetics, accessibility compliance, and UX patterns.
-
-- **Audited Metrics (The 7 Dimensions)**:
-  1. **Layout & Spacing**: Evaluating alignment, padding density, and 8pt grids.
-  2. **Visual Hierarchy**: Size contrast, weight distribution, and readability scan-paths.
-  3. **Accessibility & Contrast**: WCAG AA standards, color-blindness support, and keyboard outline indicators.
-  4. **Mobile Usability**: Fluid widths, finger-tap sizes (>44px), and viewport media query breakpoints.
-  5. **Interaction Feedback**: Hover outlines, active clicks, and transitions.
-  6. **Performance Feel**: Load speed, CSS layout optimization, and skeleton placeholders.
-  7. **Design Consistency**: HSL golden tokens, shared charcoal palettes, and reusable elements.
-- **Visual Dashboard**:
-  - **Circular Score Gauge**: A concentric, rotating overall rating circle (out of 10) signaling UX health.
-  - **Metric Sub-Grids**: Progress meters detailing score ratings from 1 to 10.
-  - **Collapsible Checklist Cards**: Separates reviews into strengths, quick wins, and deeper systemic upgrades.
-  - **Identified Design Issues**: Dynamic cards displaying severity badges (low, medium, high), category tags, problem breakdowns, and code-based recommended fixes.
-  - **Master Handoff Prompt**: Automatically generates a robust implementation instruction optimized for Cursor or Antigravity to code out the requested UI improvements.
-
----
-
-### 6. Engine Settings & Security Diagnostics
-Configures model attributes while maintaining the highest standard of data safety.
-
-- **Custom Settings Modal**: Select active models (e.g., `gemini-3.5-flash`), adjust temperature curves, configure output limits, toggle strict response schemas, and enter private API keys (BYOK mode).
-- **Recursive Secret Redactor**: Before saving history logs to LocalStorage or exporting JSON vibe packets, a recursive scanner identifies and replaces sensitive API key strings (`GEMINI_API_KEY`, etc.) with `[REDACTED]`.
-- **Diagnostics HUD**: A collapsible real-time system diagnostics head-up display outlining connection statuses, key logs, schema requirements, and sanitized backend stack traces.
-
----
-
-## 🎨 The Prompt Recipe Library (Deep Dive)
-
-Prompt Refinery features a modular registry of pre-compiler recipes. Each recipe is equipped with a specialized system instruction, a custom context compiler, and local mock generators.
-
----
-
-### 1. Quick Blueprint (`blueprint`)
-* **What it is**: The default pre-compiler that translates rough inputs into an all-in-one JSON blueprint outlining objectives, constraints, HSL styles, database tables, and reliability states.
-* **When to use**: When you want an all-in-one system specification with an active assumption refinement loop to start vibe coding immediately.
-* **Use Case Example**: Building a client-side offline fitness logging workspace.
-  * **Input**: *"build me a workout logger"*
-  * **Output**: A comprehensive JSON blueprint featuring structured must-have requirements, an entity schema catalog, local storage caching indicators, HSL amber/gold color palettes, and a final compiled system instruction.
-
----
-
-### 2. Idea Refinement (`idea_refinement`)
-* **What it is**: Transforms rough prompts into a fully organized Markdown Project Request with descriptions, audience, core features, styling guidelines, WCAG accessibility benchmarks, and open questions.
-* **When to use**: When you have a raw app concept and need to scope out its general product requirements before writing a line of code.
-* **Use Case Example**: Pitching or drafting the requirement specifications for a voice-activated grocery list.
-  * **Input**: *"voice shopping list"*
-  * **Output**: A markdown file with headers `# Project Name`, `## Target Audience`, `## Desired Features` outlining voice wake-word triggers, speech-to-text parsers, offline state caches, and accessibility speech feedback loops.
-
----
-
-### 3. Technical Specification (`technical_spec`)
-* **What it is**: Elaborates the product specs into an analytical 11-layered software architecture document touching backend models, API boundaries, entity relationships, performance latency, security constraints, and devops paradigms.
-* **When to use**: When you have defined product requests and need to plan the database schemas and infrastructure layers.
-* **Use Case Example**: Designing the schema relationships for a multiplayer browser card game.
-  * **Input**: *"multiplayer card game spec"*
-  * **Output**: An architecture specification detailing WebSocket message patterns, game state entity schemas, rate-limiting, and microservice container deployment setups.
-
----
-
-### 4. Implementation Plan (`implementation_plan`)
-* **What it is**: Creates a highly detailed, atomic coding roadmap split into sequential milestones, ensuring that each step modifies less than 20 files for a secondary agent.
-* **When to use**: When you want to construct a meticulous checklist to paste into Cursor or Antigravity to build step-by-step.
-* **Use Case Example**: Structuring the refactoring stages of a large monolith into microservices.
-  * **Input**: *"monolith refactoring checklist"*
-  * **Output**: An atomic implementation plan with step-by-step checklists, target scopes, and precise unit verification commands (`npm run test`) for each milestone.
-
----
-
-### 5. Code Review / Optimization (`code_review`)
-* **What it is**: Audits raw source files or developer notes and constructs a prioritized performance optimization list.
-* **When to use**: When you are refactoring legacy code, cleaning up technical debt, or optimizing render counts.
-* **Use Case Example**: Benchmarking and fixing slow React renders or database query speeds.
-  * **Input**: *"review these slow React components"*
-  * **Output**: An audit report identifying expensive computation blocks, recommending `useMemo`/`useCallback` additions, and documenting query indexing guidelines.
-
----
-
-### 6. Design Principles / Audit (`design_audit`)
-* **What it is**: Evaluates UI layout plans against 17 core design and accessibility guidelines, covering 8px spacing units, tokenized HSL scales, WCAG AA contrast standards, prefers-reduced-motion queries, focus ring outlines, mobile-first breakpoints, and interactive state models.
-* **When to use**: When you want to review textual layout mockups, Visual preferences, CSS notes, or app specifications for visual premiumness, responsive fluid layout, and high accessibility compliance before coding.
-* **Use Case Example**: Redesigning a cluttered database list console to look like a high-end, responsive dashboard.
-  * **Input**: 
-    * **Project Name**: *CloudMetrics Console*
-    * **UI Description**: *A grid table showing virtual server lists. It has light-gray card borders, thin small black text on a white background, and standard browser checkboxes with no icons.*
-    * **Issues**: *Looks cluttered and boring; hard to read text; zero active states or animations; layout breaks on tablets.*
-    * **Target Device**: *Desktop & Mobile*
-    * **Visual Style**: *Sleek charcoal glassmorphism with golden accents*
-  * **Output**: A comprehensive visual design audit plan detailing:
-    * **Overall score**: *4.8 / 10*
-    * **7 rated metrics**: Spacing (3), Hierarchy (5), Accessibility (4), Mobile (4), Interaction (3), Performance (8), Consistency (5).
-    * **Visual Strengths**: *Solid backend response speed; clear server metadata fields.*
-    * **Quick UX Wins checklist**: *Implement outline focus rings (`focus-visible:ring-2`); replace table borders with subtle divider borders; apply `Google Font Outfit` for distinct headings.*
-    * **Systemic improvements**: *Build fluid media-query flex containers to replace strict grid columns; define local custom CSS variables for cohesive HSL tokens.*
-    * **Master Agent Prompt**: A copy-paste-ready instruction to build out the sleek charcoal glassmorphism interface on client browsers.
-
----
-
-### 7. Black-Swan Ideation (`black_swan`)
-* **What it is**: Conceptualizes defensible startup ideas by fusing unrelated pillars, solving a catalyst problem, and applying ambient constraints.
-* **When to use**: When brainstorming high-novelty, defensible product directions or hackathon projects.
-* **Use Case Example**: Brainstorming an analog-first local garden monitoring utility.
-  * **Input**: *"offline garden tracker"*
-  * **Output**: An unconventional specification utilizing analog paper QR codes, local device Bluetooth mesh networking, ephemeral status tracking, and defensive growth monitoring loops.
-
----
-
-### 8. Final Vibe Prompt (`final_vibe`)
-* **What it is**: Fuses all preceding pipeline milestone specs into a highly focused single-step coding prompt directing an agent to implement a precise scope.
-* **When to use**: The final stage of the refinery pipeline, ready to copy-paste directly into your secondary coding agent.
-* **Use Case Example**: Constructing a single-step scaffold prompt for a Web Audio oscillator dashboard.
-  * **Input**: *Previous specs of Web Audio oscillator dashboard*
-  * **Output**: An optimized, copy-paste-ready agent prompt directing the implementation of foundational audio nodes, Amber dark aesthetic tokens, volume slides, and WCAG accessibility tags.
-
----
-
-## 🛠️ Running Locally
+## 🚀 Local Quickstart
 
 ### Prerequisites
 * [Node.js](https://nodejs.org/) (Version 18+ recommended)
-* A Gemini API key (for AI features)
+* A Google Gemini API Key (or a compatible Custom LLM proxy endpoint)
 
 ### Installation
-1. Clone the repository:
+1. Clone the repository and navigate to the directory:
    ```bash
    git clone https://github.com/drinkwaterdrink/Prompt-Refinery.git
    cd Prompt-Refinery
@@ -271,29 +48,51 @@ Prompt Refinery features a modular registry of pre-compiler recipes. Each recipe
    ```bash
    npm install
    ```
-3. Set your Gemini API key in a `.env` file:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-4. Spin up the development server:
+3. Set up your local environment file:
    ```bash
-   npm run dev
+   cp .env.example .env
    ```
-5. Open your browser and navigate to `http://localhost:3000`.
+   *Edit `.env` to include your `GEMINI_API_KEY` (or configure Custom LLM keys transiently in the client Settings modal).*
 
----
-
-## 🧪 Verification and Build Checks
-
-Prompt Refinery is equipped with rigorous validation utilities. To confirm code correctness:
-
-* **TypeScript Strict Compiler check**:
+### Local Development Lifecycle
+* **Running Development Server**:
   ```bash
-  npm run lint
-  # or npx tsc --noEmit
+  npm run dev
   ```
-* **Production Build bundler**:
+  *Launches the server on `http://localhost:3000` with hot-reloading active.*
+* **Production Packaging & Bundle**:
   ```bash
   npm run build
   ```
-  *(Compiles client static assets via Vite, packages Express server via esbuild into `dist/server.cjs` and exports production-ready asset maps).*
+  *Compiles and builds minified static assets via Vite, and bundles the Express server via esbuild into `dist/server.cjs`.*
+* **Spinning Up Production Server**:
+  ```bash
+  npm run start
+  ```
+  *Executes the bundled, production-ready server process.*
+* **TypeScript Integrity Type check**:
+  ```bash
+  npm run lint
+  ```
+  *Runs non-emitting strict static compilation checks over all modules.*
+
+---
+
+## 📖 Comprehensive Guides & Documentation
+
+To learn more about configuring, extending, or deploying Prompt Refinery, explore our dedicated guides:
+
+1. [🔌 Backend API Reference](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/API_ENDPOINTS.md) — Detailed Express server routes, request payloads, response schemas, and telemetry formats.
+2. [📋 The Prompt Recipe Library](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/PROMPT_RECIPES.md) — Explains recipe schemas, registries, custom recipe additions, and Quality Profiles integrations.
+3. [📱 Mobile Local Network Access](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/PHONE_ACCESS.md) — How to access the workspace from your smartphone, find LAN IPs, and configure Windows Defender Firewall port rules.
+4. [☁️ Cloud Deployment Readiness](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/DEPLOYMENT.md) — Hosting guidelines for Railway, Render, Fly.io, or VPS, and limitations of static-only decoders.
+5. [🔒 Security & Key Hygiene Policy](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/SECURITY.md) — Outlines BYOK storage transient policies, server secrets management, and automated logs redactions.
+
+---
+
+## 🔮 Roadmap & Future Directions
+
+* **Ollama Local Embedding**: Enable vector-based codebase indexing locally using native Ollama integrations.
+* **Cursor Settings Sync**: Directly write and synchronize compiled prompt blueprints to `.cursorrules` in local workspaces.
+* **Telemetry Latency Graphs**: Display real-time token cost and model generation latency logs inside the Diagnostics panel.
+* **Canvas Layout Editor**: Implement a visual blueprint node builder mapping functional objectives to UI components on a draggable drag-and-drop canvas.

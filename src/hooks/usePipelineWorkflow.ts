@@ -4,8 +4,9 @@
  */
 
 import { useState, useCallback } from 'react';
-import { RefineryPipeline, PipelineStageResult, ConversationHistoryRow, ProjectContextPack } from '../types';
+import { RefineryPipeline, PipelineStageResult, ConversationHistoryRow, ProjectContextPack, PromptRecipeId } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
+import { getRecipeById } from '../lib/promptRecipes/registry';
 
 import type { CustomOpenAIConfig } from '../lib/providers/types';
 
@@ -205,6 +206,66 @@ export function usePipelineWorkflow({
     }
 
     const { recipeId, label } = STAGE_RECIPES[stageKey];
+
+    if (generationMode === 'mock') {
+      // Local client-side mock stage compilation for 100% offline usage
+      setTimeout(() => {
+        try {
+          const recipe = getRecipeById(recipeId as PromptRecipeId);
+          const mockOutcome = recipe.mockGenerator(rawPrompt, accumulatedContext, refinementProfile, projectPack);
+          
+          const stageResult: PipelineStageResult = {
+            recipeId,
+            outputKind: 'markdown',
+            title: label,
+            content: recursiveSanitize(mockOutcome || '')
+          };
+
+          setPipeline(prev => {
+            if (!prev) return null;
+            
+            const updatedPipeline: RefineryPipeline = {
+              ...prev,
+              stages: {
+                ...prev.stages,
+                [stageKey]: stageResult
+              },
+              updatedAt: new Date().toISOString()
+            };
+
+            // Save the entire updated pipeline state to the history log
+            saveToWorkflowHistory(
+              rawPrompt,
+              baseContext,
+              historyRows,
+              null,
+              'mock',
+              'pipeline',
+              recipeId,
+              undefined,
+              undefined,
+              undefined,
+              'pipeline',
+              updatedPipeline,
+              undefined,
+              undefined,
+              refinementProfile
+            );
+
+            return updatedPipeline;
+          });
+
+          setStageStatuses(prev => ({ ...prev, [stageKey]: 'complete' }));
+          showToast(`${label} stage completed!`);
+        } catch (err: any) {
+          const errorMsg = err.message || 'Mock failed';
+          setStageStatuses(prev => ({ ...prev, [stageKey]: 'error' }));
+          setStageErrors(prev => ({ ...prev, [stageKey]: errorMsg }));
+          showToast(`Failed to generate ${label}.`);
+        }
+      }, 1200);
+      return;
+    }
 
     try {
       const response = await fetch('/api/refine', {

@@ -1,7 +1,7 @@
 {
-  "name": "react-example",
+  "name": "prompt-refinery",
   "private": true,
-  "version": "0.09",
+  "version": "0.10",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

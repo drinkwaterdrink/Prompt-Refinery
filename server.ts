@@ -18,6 +18,53 @@ import { getProfileById } from "./src/lib/promptProfiles";
 
 dotenv.config();
 
+function repairJson(jsonStr: string): string {
+  let clean = jsonStr.trim();
+  
+  let openBraces = 0;
+  let openBrackets = 0;
+  let inString = false;
+  let escape = false;
+  
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{') openBraces++;
+      else if (char === '}') openBraces--;
+      else if (char === '[') openBrackets++;
+      else if (char === ']') openBrackets--;
+    }
+  }
+  
+  if (inString) {
+    clean += '"';
+  }
+  
+  while (openBrackets > 0) {
+    clean += ']';
+    openBrackets--;
+  }
+  
+  while (openBraces > 0) {
+    clean += '}';
+    openBraces--;
+  }
+  
+  return clean;
+}
+
 /**
  * Robustly parses and extracts the correct JSON blueprint object from model outputs
  */
@@ -40,8 +87,18 @@ function extractJsonBlueprint(text: string): { parsedJson: any; parseError: stri
     // continue to robust parsing
   }
 
+  // 1b. Try parsing after JSON repair if it might be truncated
+  try {
+    const repaired = repairJson(clean);
+    const parsed = JSON.parse(repaired);
+    if (parsed && typeof parsed === "object") {
+      return { parsedJson: parsed, parseError: null };
+    }
+  } catch (e) {
+    // continue to robust parsing
+  }
+
   // 2. Find all opening braces and try matching them with closing braces
-  // We want to find valid outer objects and search for the one that looks like a blueprint.
   const results: any[] = [];
   
   for (let startIdx = 0; startIdx < clean.length; startIdx++) {
@@ -88,12 +145,10 @@ function extractJsonBlueprint(text: string): { parsedJson: any; parseError: stri
 
   // If we found any successfully parsed objects, find the best match
   if (results.length > 0) {
-    // High confidence: contains schema_version, final_prompt or problem_clarification keys
     const best = results.find(r => r && (r.schema_version || r.final_prompt || r.problem_clarification));
     if (best) {
       return { parsedJson: best, parseError: null };
     }
-    // Sort by largest JSON length
     results.sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length);
     return { parsedJson: results[0], parseError: null };
   }
@@ -116,10 +171,244 @@ function extractJsonBlueprint(text: string): { parsedJson: any; parseError: stri
     }
   }
 
+  // 3b. Try greedy search on repaired string
+  try {
+    const repaired = repairJson(clean);
+    const firstBraceRep = repaired.indexOf('{');
+    const lastBraceRep = repaired.lastIndexOf('}');
+    if (firstBraceRep !== -1 && lastBraceRep !== -1 && lastBraceRep > firstBraceRep) {
+      const candidate = repaired.substring(firstBraceRep, lastBraceRep + 1);
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object") {
+        return { parsedJson: parsed, parseError: null };
+      }
+    }
+  } catch (e) {
+    // skip
+  }
+
   return { 
     parsedJson: null, 
     parseError: "Could not find any valid JSON object structure in response payload." 
   };
+}
+
+/**
+ * Self-healing layer to auto-correct and format minor model JSON schema deviations
+ */
+function healBlueprint(data: any): any {
+  if (!data || typeof data !== 'object') {
+    return {
+      schema_version: "1.0",
+      title: "Untitled Refined Blueprint",
+      summary: "Model output could not be parsed as a structured blueprint.",
+      intent_classification: { request_type: "ambiguous", confidence: "low", detected_domain: "General" },
+      problem_clarification: { expanded_description: "General system blueprint", core_objectives: [], primary_users: [], assumptions: [], constraints: [] },
+      functional_requirements: { must_have: [], should_have: [], could_have: [], wont_have: [] },
+      architecture: { paradigm: "", frontend: "", backend: "", database: "", apis: "", services: [], integrations: [], infra: "", devops: "" },
+      data_models: { entities: [], schemas: [] },
+      user_experience: { design_style: "", layout_system: "", navigation_structure: "", component_list: [], interaction_states: [], user_flows: [], animations: "", accessibility: "" },
+      security_reliability: { authentication: "", authorization: "", data_validation: "", rate_limiting: "", logging_monitoring: "", error_handling: "", privacy: "" },
+      performance_constraints: { scalability: "", latency: "", load_expectations: "", resource_constraints: "" },
+      edge_cases: [],
+      developer_notes: [],
+      final_prompt: "Develop a basic software application."
+    };
+  }
+
+  // 1. Force schema_version
+  if (!data.schema_version) {
+    data.schema_version = "1.0";
+  }
+
+  // 2. Heal simple string fields
+  if (typeof data.title !== 'string' || !data.title.trim()) {
+    data.title = data.title || "Untitled Refined Blueprint";
+  }
+  if (typeof data.summary !== 'string' || !data.summary.trim()) {
+    data.summary = data.summary || "No summary provided by the model.";
+  }
+
+  // 3. Heal intent_classification
+  if (data.intentClassification && !data.intent_classification) {
+    data.intent_classification = data.intentClassification;
+  }
+  if (!data.intent_classification || typeof data.intent_classification !== 'object') {
+    data.intent_classification = { request_type: "new_build", confidence: "high", detected_domain: "General" };
+  } else {
+    const ic = data.intent_classification;
+    if (ic.requestType && !ic.request_type) ic.request_type = ic.requestType;
+    if (ic.detectedDomain && !ic.detected_domain) ic.detected_domain = ic.detectedDomain;
+
+    const reqTypes = ['new_build', 'feature_addition', 'bug_fix', 'refactor', 'design_change', 'ambiguous'];
+    if (!reqTypes.includes(ic.request_type)) {
+      ic.request_type = "new_build";
+    }
+    const confidences = ['high', 'medium', 'low'];
+    if (!confidences.includes(ic.confidence)) {
+      ic.confidence = "high";
+    }
+    if (typeof ic.detected_domain !== 'string') {
+      ic.detected_domain = "General";
+    }
+  }
+
+  // 4. Heal problem_clarification
+  if (data.problemClarification && !data.problem_clarification) {
+    data.problem_clarification = data.problemClarification;
+  }
+  if (!data.problem_clarification || typeof data.problem_clarification !== 'object') {
+    data.problem_clarification = {
+      expanded_description: "General project description.",
+      core_objectives: [],
+      primary_users: [],
+      assumptions: [],
+      constraints: []
+    };
+  } else {
+    const pc = data.problem_clarification;
+    if (pc.expandedDescription && !pc.expanded_description) pc.expanded_description = pc.expandedDescription;
+    if (pc.coreObjectives && !pc.core_objectives) pc.core_objectives = pc.coreObjectives;
+    
+    if (pc.primaryUser && !pc.primary_users) pc.primary_users = Array.isArray(pc.primaryUser) ? pc.primaryUser : [pc.primaryUser];
+    if (pc.primaryUsers && !pc.primary_users) pc.primary_users = pc.primaryUsers;
+    if (!Array.isArray(pc.primary_users)) pc.primary_users = [];
+
+    if (pc.constraint && !pc.constraints) pc.constraints = Array.isArray(pc.constraint) ? pc.constraint : [pc.constraint];
+    if (!Array.isArray(pc.constraints)) pc.constraints = [];
+    if (!Array.isArray(pc.core_objectives)) pc.core_objectives = [];
+
+    // Heal assumptions
+    if (pc.assumption && !pc.assumptions) pc.assumptions = Array.isArray(pc.assumption) ? pc.assumption : [pc.assumption];
+    if (!Array.isArray(pc.assumptions)) pc.assumptions = [];
+    
+    pc.assumptions.forEach((ass: any, idx: number) => {
+      if (typeof ass !== 'object' || !ass) {
+        pc.assumptions[idx] = { id: `ass_${idx}`, text: "General assumption", confidence: "medium", source: "explicit" };
+        return;
+      }
+      if (!ass.id || typeof ass.id !== 'string') {
+        ass.id = `ass_${idx}`;
+      }
+      if (!ass.text || typeof ass.text !== 'string') {
+        ass.text = ass.text || "Implied project context.";
+      }
+      const confs = ['high', 'medium', 'low'];
+      if (!confs.includes(ass.confidence)) {
+        ass.confidence = "medium";
+      }
+      const sources = ['explicit', 'inferred_from_context', 'industry_default'];
+      if (!sources.includes(ass.source)) {
+        ass.source = "inferred_from_context";
+      }
+    });
+  }
+
+  // 5. Heal functional_requirements
+  if (data.functionalRequirements && !data.functional_requirements) {
+    data.functional_requirements = data.functionalRequirements;
+  }
+  if (!data.functional_requirements || typeof data.functional_requirements !== 'object') {
+    data.functional_requirements = { must_have: [], should_have: [], could_have: [], wont_have: [] };
+  } else {
+    const fr = data.functional_requirements;
+    if (fr.mustHaves && !fr.must_have) fr.must_have = fr.mustHaves;
+    if (fr.shouldHaves && !fr.should_have) fr.should_have = fr.shouldHaves;
+    if (fr.couldHaves && !fr.could_have) fr.could_have = fr.couldHaves;
+    if (fr.wontHaves && !fr.wont_have) fr.wont_have = fr.wontHaves;
+
+    if (!Array.isArray(fr.must_have)) fr.must_have = [];
+    if (!Array.isArray(fr.should_have)) fr.should_have = [];
+    if (!Array.isArray(fr.could_have)) fr.could_have = [];
+    if (!Array.isArray(fr.wont_have)) fr.wont_have = [];
+  }
+
+  // 6. Heal architecture
+  if (!data.architecture || typeof data.architecture !== 'object') {
+    data.architecture = { paradigm: "", frontend: "", backend: "", database: "", apis: "", services: [], integrations: [], infra: "", devops: "" };
+  } else {
+    const arch = data.architecture;
+    const stringKeys = ['paradigm', 'frontend', 'backend', 'database', 'apis', 'infra', 'devops'];
+    stringKeys.forEach(k => {
+      if (typeof arch[k] !== 'string') {
+        arch[k] = arch[k] ? String(arch[k]) : "";
+      }
+    });
+    if (!Array.isArray(arch.services)) arch.services = [];
+    if (!Array.isArray(arch.integrations)) arch.integrations = [];
+  }
+
+  // 7. Heal data_models
+  if (data.dataModels && !data.data_models) data.data_models = data.dataModels;
+  if (!data.data_models || typeof data.data_models !== 'object') {
+    data.data_models = { entities: [], schemas: [] };
+  } else {
+    const dm = data.data_models;
+    if (!Array.isArray(dm.entities)) dm.entities = [];
+    if (!Array.isArray(dm.schemas)) dm.schemas = [];
+  }
+
+  // 8. Heal user_experience
+  if (data.userExperience && !data.user_experience) data.user_experience = data.userExperience;
+  if (!data.user_experience || typeof data.user_experience !== 'object') {
+    data.user_experience = { design_style: "", layout_system: "", navigation_structure: "", component_list: [], interaction_states: [], user_flows: [], animations: "", accessibility: "" };
+  } else {
+    const ux = data.user_experience;
+    const stringKeys = ['design_style', 'layout_system', 'navigation_structure', 'animations', 'accessibility'];
+    stringKeys.forEach(k => {
+      if (typeof ux[k] !== 'string') {
+        ux[k] = ux[k] ? String(ux[k]) : "";
+      }
+    });
+    if (ux.componentList && !ux.component_list) ux.component_list = ux.componentList;
+    if (ux.interactionStates && !ux.interaction_states) ux.interaction_states = ux.interactionStates;
+    if (ux.userFlows && !ux.user_flows) ux.user_flows = ux.userFlows;
+
+    if (!Array.isArray(ux.component_list)) ux.component_list = [];
+    if (!Array.isArray(ux.interaction_states)) ux.interaction_states = [];
+    if (!Array.isArray(ux.user_flows)) ux.user_flows = [];
+  }
+
+  // 9. Heal security_reliability
+  if (data.securityReliability && !data.security_reliability) data.security_reliability = data.securityReliability;
+  if (!data.security_reliability || typeof data.security_reliability !== 'object') {
+    data.security_reliability = { authentication: "", authorization: "", data_validation: "", rate_limiting: "", logging_monitoring: "", error_handling: "", privacy: "" };
+  } else {
+    const sr = data.security_reliability;
+    const stringKeys = ['authentication', 'authorization', 'data_validation', 'rate_limiting', 'logging_monitoring', 'error_handling', 'privacy'];
+    stringKeys.forEach(k => {
+      if (typeof sr[k] !== 'string') {
+        sr[k] = sr[k] ? String(sr[k]) : "";
+      }
+    });
+  }
+
+  // 10. Heal performance_constraints
+  if (data.performanceConstraints && !data.performance_constraints) data.performance_constraints = data.performanceConstraints;
+  if (!data.performance_constraints || typeof data.performance_constraints !== 'object') {
+    data.performance_constraints = { scalability: "", latency: "", load_expectations: "", resource_constraints: "" };
+  } else {
+    const pc = data.performance_constraints;
+    const stringKeys = ['scalability', 'latency', 'load_expectations', 'resource_constraints'];
+    stringKeys.forEach(k => {
+      if (typeof pc[k] !== 'string') {
+        pc[k] = pc[k] ? String(pc[k]) : "";
+      }
+    });
+  }
+
+  // 11. Heal edge_cases, developer_notes, final_prompt
+  if (data.edgeCases && !data.edge_cases) data.edge_cases = data.edgeCases;
+  if (data.developerNotes && !data.developer_notes) data.developer_notes = data.developerNotes;
+  if (data.finalPrompt && !data.final_prompt) data.final_prompt = data.finalPrompt;
+
+  if (!Array.isArray(data.edge_cases)) data.edge_cases = [];
+  if (!Array.isArray(data.developer_notes)) data.developer_notes = [];
+  if (typeof data.final_prompt !== 'string' || !data.final_prompt.trim()) {
+    data.final_prompt = data.final_prompt || "Develop a fully validated and optimized application matching these architectural plans.";
+  }
+
+  return data;
 }
 
 /**
@@ -214,6 +503,8 @@ interface CustomOpenAIRequestParams {
   systemInstruction: string;
   userPrompt: string;
   config: any;
+  temperature?: number;
+  maxOutputTokens?: number;
 }
 
 async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<string> {
@@ -221,17 +512,25 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
   if (!config) {
     throw new Error("Custom OpenAI configuration is missing.");
   }
-  const baseUrl = (config.baseUrl || "").trim();
-  if (!baseUrl) {
-    throw new Error("Custom OpenAI Base URL is required.");
+  
+  let fullUrl = (config.apiUrl || "").trim();
+  if (fullUrl) {
+    fullUrl = fullUrl.replace(/\/+$/, "");
+    if (!fullUrl.endsWith("/completions")) {
+      fullUrl = fullUrl + "/chat/completions";
+    }
+  } else {
+    const baseUrl = (config.baseUrl || "").trim();
+    if (!baseUrl) {
+      throw new Error("Custom OpenAI API URL or Base URL is required.");
+    }
+    let endpoint = (config.endpointPath || "/v1/chat/completions").trim();
+    if (!endpoint.startsWith("/")) {
+      endpoint = "/" + endpoint;
+    }
+    fullUrl = baseUrl.replace(/\/+$/, "") + endpoint;
   }
   
-  let endpoint = (config.endpointPath || "/v1/chat/completions").trim();
-  if (!endpoint.startsWith("/")) {
-    endpoint = "/" + endpoint;
-  }
-  
-  const fullUrl = baseUrl.replace(/\/+$/, "") + endpoint;
   const apiKey = (config.apiKey || "").trim();
   const model = (config.model || "").trim();
   const jsonMode = !!config.jsonMode;
@@ -261,6 +560,13 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
       { role: "user", content: userPrompt }
     ]
   };
+
+  if (typeof params.temperature === 'number') {
+    body.temperature = params.temperature;
+  }
+  if (typeof params.maxOutputTokens === 'number') {
+    body.max_tokens = params.maxOutputTokens;
+  }
   
   if (jsonMode) {
     body.response_format = { type: "json_object" };
@@ -301,6 +607,10 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
     return text;
   } catch (err: any) {
     let msg = err.message || String(err);
+    if (err.cause) {
+      const causeDetails = err.cause.message || err.cause.code || String(err.cause);
+      msg += ` (Cause: ${causeDetails})`;
+    }
     if (apiKey) {
       const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const apiKeyRegex = new RegExp(escapeRegExp(apiKey), "g");
@@ -312,7 +622,8 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
 
 async function startServer() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
   const PORT = 3000;
 
   // Initialize dynamic Gemini Client with custom or fallback API credentials
@@ -384,27 +695,46 @@ async function startServer() {
     res.json({ status: "ok", mode: process.env.GEMINI_API_KEY ? "gemini" : "mock-only" });
   });
 
-  // Test connection for Custom OpenAI endpoint
+  // Test connection endpoint
   app.post("/api/test-connection", async (req, res) => {
-    const { config } = req.body;
+    const { config, mode } = req.body;
     if (!config) {
       return res.status(400).json({ ok: false, error: "Configuration is missing." });
     }
     
     const startTime = Date.now();
     try {
-      const responseText = await callCustomOpenAI({
-        systemInstruction: "You are a connectivity test agent. Respond only with the word 'OK'.",
-        userPrompt: "Are you online?",
-        config
-      });
-      const latencyMs = Date.now() - startTime;
-      return res.json({ ok: true, latencyMs, text: responseText.trim() });
+      if (mode === 'gemini') {
+        const { ai: activeClient, error: clientSetupError } = getGeminiClient({
+          browserApiKey: config.browserApiKey
+        });
+        if (clientSetupError || !activeClient) {
+          throw new Error(clientSetupError || "Failed to initialize Gemini client.");
+        }
+        const response = await activeClient.models.generateContent({
+          model: config.model || "gemini-3.5-flash",
+          contents: "Are you online? Respond with only 'OK'.",
+        });
+        const latencyMs = Date.now() - startTime;
+        const responseText = response.text || "";
+        return res.json({ ok: true, latencyMs, text: responseText.trim() });
+      } else {
+        const responseText = await callCustomOpenAI({
+          systemInstruction: "You are a connectivity test agent. Respond only with the word 'OK'.",
+          userPrompt: "Are you online?",
+          config
+        });
+        const latencyMs = Date.now() - startTime;
+        return res.json({ ok: true, latencyMs, text: responseText.trim() });
+      }
     } catch (err: any) {
       console.error("Test connection failed:", err);
       let errMsg = err.message || String(err);
       if (config.apiKey && errMsg.includes(config.apiKey)) {
         errMsg = errMsg.split(config.apiKey).join("[REDACTED]");
+      }
+      if (config.browserApiKey && errMsg.includes(config.browserApiKey)) {
+        errMsg = errMsg.split(config.browserApiKey).join("[REDACTED]");
       }
       return res.json({ ok: false, error: recursiveSanitize(errMsg) });
     }
@@ -458,7 +788,9 @@ You must reason privately. Output valid JSON only, matching the requested schema
         const textOutput = await callCustomOpenAI({
           systemInstruction: sparksSystemInstruction,
           userPrompt: userPromptContent,
-          config: customConfig
+          config: customConfig,
+          temperature: typeof settings?.temperature === 'number' ? settings.temperature : undefined,
+          maxOutputTokens: typeof settings?.maxOutputTokens === 'number' ? settings.maxOutputTokens : undefined
         });
 
         if (!textOutput.trim()) {
@@ -739,7 +1071,9 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
           const textOutput = await callCustomOpenAI({
             systemInstruction,
             userPrompt,
-            config: customConfig
+            config: customConfig,
+            temperature: typeof settings?.temperature === 'number' ? settings.temperature : undefined,
+            maxOutputTokens: typeof settings?.maxOutputTokens === 'number' ? settings.maxOutputTokens : undefined
           });
 
           if (!textOutput.trim()) {
@@ -755,6 +1089,7 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
             parsedJson.known_context_used = Array.from(new Set([...parsedJson.known_context_used, ...extractedFilesList]));
           }
 
+          parsedJson.ok = true;
           return res.json(parsedJson);
         } catch (customError: any) {
           console.error("Custom OpenAI Code Review failed:", customError);
@@ -1006,7 +1341,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           const textOutput = await callCustomOpenAI({
             systemInstruction,
             userPrompt,
-            config: customConfig
+            config: customConfig,
+            temperature: typeof settings?.temperature === 'number' ? settings.temperature : undefined,
+            maxOutputTokens: typeof settings?.maxOutputTokens === 'number' ? settings.maxOutputTokens : undefined
           });
 
           if (!textOutput.trim()) {
@@ -1021,6 +1358,7 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           parsedJson.targetDevice = targetDevice || "both";
           parsedJson.stylePreference = stylePreference || "Cohesive HSL Accent";
 
+          parsedJson.ok = true;
           return res.json(parsedJson);
         } catch (customError: any) {
           console.error("Custom OpenAI Design Audit failed:", customError);
@@ -1195,7 +1533,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           const textOutput = await callCustomOpenAI({
             systemInstruction,
             userPrompt: userPromptContent,
-            config: customConfig
+            config: customConfig,
+            temperature: typeof settings?.temperature === 'number' ? settings.temperature : undefined,
+            maxOutputTokens: typeof settings?.maxOutputTokens === 'number' ? settings.maxOutputTokens : undefined
           });
 
           if (!textOutput.trim()) {
@@ -1225,8 +1565,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
             });
           }
 
-          // Validate the structure against exact schema (exclusive to blueprint mode)
-          const schemaIssues = validateBlueprint(parsedJson);
+          // Heal the parsed blueprint and validate the healed version
+          const healed = healBlueprint(parsedJson);
+          const schemaIssues = validateBlueprint(healed);
           if (schemaIssues) {
             return res.status(422).json({
               ok: false,
@@ -1235,10 +1576,10 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
             });
           }
 
-          // Successfully parsed and validated!
+          // Successfully parsed, healed, and validated!
           return res.json({
             ok: true,
-            blueprint: parsedJson
+            blueprint: healed
           });
 
         } catch (customError: any) {
@@ -1330,8 +1671,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           });
         }
 
-        // Validate the structure against exact schema (exclusive to blueprint mode)
-        const schemaIssues = validateBlueprint(parsedJson);
+        // Heal the parsed blueprint and validate the healed version
+        const healed = healBlueprint(parsedJson);
+        const schemaIssues = validateBlueprint(healed);
         if (schemaIssues) {
           return res.status(422).json({
             ok: false,
@@ -1340,10 +1682,10 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           });
         }
 
-        // Successfully parsed and validated!
+        // Successfully parsed, healed, and validated!
         return res.json({
           ok: true,
-          blueprint: parsedJson
+          blueprint: healed
         });
 
       } catch (geminiError: any) {
@@ -1497,7 +1839,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           const textOutput = await callCustomOpenAI({
             systemInstruction,
             userPrompt: userPromptContent,
-            config: customConfig
+            config: customConfig,
+            temperature: typeof settings?.temperature === 'number' ? settings.temperature : undefined,
+            maxOutputTokens: typeof settings?.maxOutputTokens === 'number' ? settings.maxOutputTokens : undefined
           });
 
           if (!textOutput.trim()) {
@@ -1514,7 +1858,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
             });
           }
 
-          const schemaIssues = validateBlueprint(parsedJson);
+          // Heal the parsed blueprint and validate the healed version
+          const healed = healBlueprint(parsedJson);
+          const schemaIssues = validateBlueprint(healed);
           if (schemaIssues) {
             return res.status(422).json({
               ok: false,
@@ -1525,7 +1871,7 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
 
           return res.json({
             ok: true,
-            blueprint: parsedJson
+            blueprint: healed
           });
 
         } catch (customError: any) {
@@ -1643,8 +1989,9 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           });
         }
 
-        // Validate the structure against exact schema
-        const schemaIssues = validateBlueprint(parsedJson);
+        // Heal the parsed blueprint and validate the healed version
+        const healed = healBlueprint(parsedJson);
+        const schemaIssues = validateBlueprint(healed);
         if (schemaIssues) {
           return res.status(422).json({
             ok: false,
@@ -1653,10 +2000,10 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           });
         }
 
-        // Successfully parsed and validated!
+        // Successfully parsed, healed, and validated!
         return res.json({
           ok: true,
-          blueprint: parsedJson
+          blueprint: healed
         });
 
       } catch (geminiError: any) {

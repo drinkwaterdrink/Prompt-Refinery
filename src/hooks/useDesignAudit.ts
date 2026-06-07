@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DesignAuditResult, ConversationHistoryRow, ProjectContextPack } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
+import { getRecipeById } from '../lib/promptRecipes/registry';
 
 interface UseDesignAuditProps {
   showToast: (msg: string) => void;
@@ -32,12 +33,36 @@ export function useDesignAudit({
   showToast,
   saveToWorkflowHistory
 }: UseDesignAuditProps) {
-  const [projectName, setProjectName] = useState<string>('');
-  const [uiDescription, setUiDescription] = useState<string>('');
-  const [currentIssues, setCurrentIssues] = useState<string>('');
-  const [targetDevice, setTargetDevice] = useState<'desktop' | 'mobile' | 'both'>('both');
-  const [stylePreference, setStylePreference] = useState<string>('Sleek Charcoal');
-  const [designNotes, setDesignNotes] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>(() => localStorage.getItem('prompt_refinery_audit_project_name') || '');
+  const [uiDescription, setUiDescription] = useState<string>(() => localStorage.getItem('prompt_refinery_audit_ui_description') || '');
+  const [currentIssues, setCurrentIssues] = useState<string>(() => localStorage.getItem('prompt_refinery_audit_current_issues') || '');
+  const [targetDevice, setTargetDevice] = useState<'desktop' | 'mobile' | 'both'>(() => (localStorage.getItem('prompt_refinery_audit_target_device') as any) || 'both');
+  const [stylePreference, setStylePreference] = useState<string>(() => localStorage.getItem('prompt_refinery_audit_style_preference') || 'Sleek Charcoal');
+  const [designNotes, setDesignNotes] = useState<string>(() => localStorage.getItem('prompt_refinery_audit_design_notes') || '');
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_audit_project_name', projectName);
+  }, [projectName]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_audit_ui_description', uiDescription);
+  }, [uiDescription]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_audit_current_issues', currentIssues);
+  }, [currentIssues]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_audit_target_device', targetDevice);
+  }, [targetDevice]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_audit_style_preference', stylePreference);
+  }, [stylePreference]);
+
+  useEffect(() => {
+    localStorage.setItem('prompt_refinery_audit_design_notes', designNotes);
+  }, [designNotes]);
 
   const [isGeneratingAudit, setIsGeneratingAudit] = useState<boolean>(false);
   const [auditResult, setAuditResult] = useState<DesignAuditResult | null>(null);
@@ -87,6 +112,42 @@ export function useDesignAudit({
     setIsGeneratingAudit(true);
     setAuditError(null);
     setAuditResult(null);
+
+    if (generationMode === 'mock') {
+      setTimeout(() => {
+        try {
+          const recipe = getRecipeById('design_audit');
+          const mockOutcome = recipe.mockGenerator(uiDescription || 'My UI');
+          const sanitizedResult = recursiveSanitize(mockOutcome);
+          setAuditResult(sanitizedResult);
+          
+          saveToWorkflowHistory(
+            `UI Review: ${uiDescription.trim().substring(0, 40)}...`,
+            `Issues: ${currentIssues.trim().substring(0, 40)}... | Device: ${targetDevice}`,
+            [],
+            null,
+            'mock',
+            'design_audit',
+            'design_audit',
+            undefined,
+            undefined,
+            undefined,
+            'design_audit',
+            undefined,
+            undefined,
+            sanitizedResult,
+            refinementProfile
+          );
+
+          showToast('Design audit report generated successfully!');
+        } catch (err: any) {
+          setAuditError(err.message || 'Mock failed');
+          showToast('Failed to audit design.');
+        }
+        setIsGeneratingAudit(false);
+      }, 1200);
+      return;
+    }
 
     try {
       const response = await fetch('/api/design-audit', {

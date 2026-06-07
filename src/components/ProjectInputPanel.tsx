@@ -4,9 +4,10 @@
  */
 
 import React, { useRef, useState } from 'react';
-import { Sparkles, RotateCcw, Upload, Trash2, Folder, BookOpen, AlertTriangle } from 'lucide-react';
+import { Sparkles, RotateCcw, Upload, Trash2, Folder, BookOpen } from 'lucide-react';
 import { ProjectContextPack } from '../types';
 import { ProjectPackSelector } from './ProjectPackSelector';
+import { EngineSelector } from './EngineSelector';
 
 interface ProjectInputPanelProps {
   projectName: string;
@@ -54,7 +55,7 @@ const DIRECTIONS = [
   "Improve security/secrets handling"
 ];
 
-export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
+export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = React.memo(({
   projectName,
   setProjectName,
   repoUrl,
@@ -96,7 +97,6 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
       return;
     }
 
-    // Size limit check: 200KB
     const MAX_SIZE = 200 * 1024;
     if (file.size > MAX_SIZE) {
       showToast('Context files are restricted to 200KB to prevent prompt token bloat!');
@@ -148,8 +148,8 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
       <form onSubmit={onSubmit} className="bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl md:p-5 p-4 flex flex-col gap-5 shadow-2xl">
         
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono font-bold tracking-widest text-[#D4AF37] uppercase flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
+          <span className="text-[10px] font-mono font-bold tracking-widest text-primary uppercase flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
             Project Optimization Inputs
           </span>
           <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
@@ -157,85 +157,44 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
           </span>
         </div>
 
-        {/* Engine Selector */}
-        <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-3 gap-2 bg-[#161616] p-1 rounded-xl border border-[#262626]">
-            <button
-              type="button"
-              onClick={() => setGenerationMode('mock')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'mock'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              🎭 Mock
-            </button>
-            <button
-              type="button"
-              onClick={() => setGenerationMode('gemini')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'gemini'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              Gemini
-            </button>
-            <button
-              type="button"
-              onClick={() => setGenerationMode('custom_openai')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'custom_openai'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              🔌 Custom API
-            </button>
-          </div>
-        </div>
+        <EngineSelector generationMode={generationMode} setGenerationMode={setGenerationMode} />
 
-        {/* 1. Project Name */}
         <div className="flex flex-col gap-2">
           <label htmlFor="project-name" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            1. Project Name <span className="text-[#D4AF37]">*</span>
+            1. Project Name <span className="text-primary">*</span>
           </label>
           <input
-            id="project-name"
             type="text"
-            required
+            id="project-name"
             value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-            placeholder="e.g. My Gym Tracker or Fleet Dashboard"
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-sm font-sans rounded-lg p-2.5 text-slate-200 placeholder-slate-600 focus:outline-none transition-all duration-150"
+            onChange={e => setProjectName(e.target.value)}
+            placeholder="e.g. PromptRefinery or My Workout Tracker"
+            className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-650 outline-none focus:border-primary transition font-sans"
+            required
           />
         </div>
 
-        {/* 2. GitHub URL URL */}
         <div className="flex flex-col gap-2">
           <label htmlFor="repo-url" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            2. Public GitHub Repository URL <span className="text-slate-600 font-normal italic">(Optional)</span>
+            Git Repository URL <span className="text-slate-600 font-normal italic">(Optional)</span>
           </label>
           <input
+            type="text"
             id="repo-url"
-            type="url"
             value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="e.g. https://github.com/username/repo"
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-sm font-sans rounded-lg p-2.5 text-slate-200 placeholder-slate-600 focus:outline-none transition-all duration-150"
+            onChange={e => setRepoUrl(e.target.value)}
+            placeholder="e.g. https://github.com/username/project"
+            className="bg-[#121212] border border-[#262626] rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-650 outline-none focus:border-primary transition font-mono"
           />
-          <p className="text-[9px] text-slate-500 font-mono leading-relaxed leading-snug">
-            💡 Analyzes core reference files (README.md, package.json, server.ts, App.tsx) raw from public GitHub.
-          </p>
         </div>
 
-        {/* 3. PDP / Context / Notes */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="notes-context" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            3. Project Context / PDP / pasted notes <span className="text-[#D4AF37]">*</span>
-          </label>
+          <div className="flex justify-between items-center">
+            <label htmlFor="project-context" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              2. Core Codebase Details & Context <span className="text-primary">*</span>
+            </label>
+          </div>
+          
           <ProjectPackSelector
             projectPacks={projectPacks}
             activePackId={activePackId}
@@ -248,27 +207,81 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
             onImportClick={onImportClick}
             onApplyContext={onApplyContext}
           />
+
           <textarea
-            id="notes-context"
-            rows={4}
-            required
+            id="project-context"
+            rows={5}
             value={projectContext}
-            onChange={(e) => setProjectContext(e.target.value)}
-            placeholder='Paste your application README, project plan, architecture specifications, file maps, bug list, or vibe packets here...'
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150 leading-relaxed"
+            onChange={e => setProjectContext(e.target.value)}
+            placeholder="Explain the tech stack, files, structure, or copy-paste repo snapshots here..."
+            className="w-full bg-[#121212] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-xs font-sans rounded-xl p-3 text-slate-200 placeholder-slate-650 focus:outline-none transition-all resize-y duration-150"
+            required
           />
         </div>
 
-        {/* 4. Goal / Direction */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="goal-direction" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            4. Current Optimization Goal / Direction <span className="text-[#D4AF37]">*</span>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Attach Schema / Spec Context File <span className="text-slate-600 font-normal italic">(Optional, max 200KB)</span>
+          </label>
+          
+          {!uploadedFileName ? (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-1.5 ${
+                isDragging 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-[#262626] bg-[#121212]/30 hover:border-primary/50 hover:bg-[#121212]/50'
+              }`}
+            >
+              <Upload className="h-5 w-5 text-slate-500" />
+              <div className="text-xs text-slate-300 font-medium">Drag spec file here or click to browse</div>
+              <div className="text-[9px] text-slate-600 font-mono">Accepts: .txt, .md, .json</div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) processFile(file);
+                }}
+                className="hidden"
+                accept=".txt,.md,.json"
+              />
+            </div>
+          ) : (
+            <div className="bg-[#161616] border border-[#262626] rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Folder className="h-4 w-4 text-primary" />
+                <span className="text-xs font-mono font-semibold text-slate-200 truncate max-w-[200px]">
+                  {uploadedFileName}
+                </span>
+                <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-900/30">
+                  ATTACHED
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveFile}
+                className="text-slate-500 hover:text-red-400 transition cursor-pointer p-1"
+                title="Remove attached file context"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="review-direction" className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            3. Optimization Focus & Direction <span className="text-primary">*</span>
           </label>
           <select
-            id="goal-direction"
+            id="review-direction"
             value={direction}
-            onChange={(e) => setDirection(e.target.value)}
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-semibold rounded-lg p-2.5 text-[#D4AF37] cursor-pointer focus:outline-none transition font-mono"
+            onChange={e => setDirection(e.target.value)}
+            className="w-full bg-[#121212] border border-[#262626] focus:border-primary text-xs font-semibold rounded-xl p-2.5 text-slate-200 cursor-pointer focus:outline-none transition appearance-none"
           >
             {DIRECTIONS.map(dir => (
               <option key={dir} value={dir}>{dir}</option>
@@ -276,86 +289,19 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
           </select>
         </div>
 
-        {/* 5. Optional Context File Upload */}
-        <div className="flex flex-col gap-2">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            5. Upload Context File <span className="text-slate-655 font-normal italic">(Optional)</span>
-          </label>
-
-          {uploadedFileName ? (
-            <div className="flex items-center justify-between bg-[#1F1914] border border-[#D4AF37]/25 p-3 rounded-xl animate-fade-in">
-              <div className="flex items-center gap-2">
-                <Folder className="h-4 w-4 text-[#D4AF37]" />
-                <div>
-                  <span className="text-xs font-mono font-bold text-slate-250 block truncate max-w-[200px]">
-                    {uploadedFileName}
-                  </span>
-                  <span className="text-[9px] text-[#D4AF37] font-mono">
-                    {Math.round(uploadedContextText.length / 102.4) / 10} KB • Loaded
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleRemoveFile}
-                className="text-slate-500 hover:text-rose-400 transition p-1.5 cursor-pointer"
-                title="Remove file"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-350 ${
-                isDragging 
-                  ? 'border-[#D4AF37] bg-[#D4AF37]/5 shadow-[0_0_15px_rgba(212,175,55,0.05)]' 
-                  : 'border-[#262626] bg-[#161616]/25 hover:border-[#D4AF37]/30 hover:bg-[#161616]/40'
-              }`}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".txt,.md,.json"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) processFile(file);
-                }}
-                className="hidden"
-              />
-              <Upload className="h-5 w-5 text-slate-500" />
-              <div className="text-center">
-                <p className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Drag & Drop or Browser File
-                </p>
-                <p className="text-[9px] text-slate-600 mt-1 font-mono">
-                  Supports .txt, .md, .json • Max 200KB size limit
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Actions Frame */}
-        <div className="flex gap-3">
+        <div className="border-t border-[#1F1F1F] pt-4.5 flex gap-3 items-center">
           <button
             type="button"
             onClick={onClear}
-            className="flex-[1] bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-350 text-[10px] font-mono tracking-widest uppercase font-bold rounded-lg py-3 justify-center transition flex items-center gap-1.5 cursor-pointer"
+            className="text-xs bg-transparent border border-[#262626] text-slate-400 font-bold px-4 py-2.5 rounded-xl transition hover:text-white active:scale-98 cursor-pointer flex items-center gap-1.5 hover:bg-[#161616]"
+            title="Reset All Inputs"
           >
-            Clear
+            <RotateCcw className="h-4 w-4" /> Clear
           </button>
           <button
             type="submit"
             disabled={isGeneratingProject || !projectName.trim() || !projectContext.trim()}
-            className={`flex-[3] text-[10px] font-mono tracking-widest uppercase font-bold rounded-lg py-3 transition relative overflow-hidden flex items-center justify-center gap-1.5 cursor-pointer ${
-              !projectName.trim() || !projectContext.trim()
-                ? 'bg-[#1E1E1E]/50 text-slate-600 border border-[#262626] cursor-not-allowed'
-                : 'bg-[#D4AF37] hover:bg-[#C09E32] text-black shadow-[0_0_20px_rgba(212,175,55,0.15)] font-semibold'
-            }`}
+            className="flex-1 bg-primary disabled:bg-slate-800 text-black disabled:text-slate-500 font-bold text-xs px-5 py-2.5 rounded-xl transition hover:opacity-90 active:scale-98 shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
           >
             {isGeneratingProject ? (
               <>
@@ -364,7 +310,7 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5 text-black fill-black" />
+                <Sparkles className="h-3.5 w-3.5" />
                 <span>Suggest Review Improvements</span>
               </>
             )}
@@ -373,10 +319,9 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
 
       </form>
 
-      {/* Methodology Advice */}
       <div className="bg-[#0E0E0E]/50 border border-[#1F1F1F] rounded-xl p-4 text-xs text-slate-400 flex flex-col gap-2">
         <span className="font-bold text-slate-300 flex items-center gap-1 font-mono uppercase text-[10px] tracking-wider">
-          <BookOpen className="h-3.5 w-3.5 text-[#D4AF37]" /> Optimization Planner
+          <BookOpen className="h-3.5 w-3.5 text-primary" /> Optimization Planner
         </span>
         <p className="leading-relaxed text-[11px] text-slate-405">
           Vibe coding requires small, iterative steps. Iterative Project Mode audits your current codebase files and directions to formulate targeted, category-sorted improvement tasks and single-step coding prompts.
@@ -385,4 +330,4 @@ export const ProjectInputPanel: React.FC<ProjectInputPanelProps> = ({
 
     </section>
   );
-};
+});

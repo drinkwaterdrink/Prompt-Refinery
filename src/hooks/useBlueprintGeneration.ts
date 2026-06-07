@@ -107,6 +107,11 @@ export function useBlueprintGeneration({
       return;
     }
 
+    if (generationMode !== 'mock' && !navigator.onLine) {
+      showToast('Network required for live model generation. Mock mode and saved history still work offline.');
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationStep(0);
     setBlueprint(null);

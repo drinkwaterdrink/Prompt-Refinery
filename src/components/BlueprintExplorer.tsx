@@ -12,11 +12,11 @@ import {
   ClipboardCheck, 
   Sparkles, 
   Code,
-  Layers,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Sliders
 } from 'lucide-react';
-import { PromptBlueprint, GenericRecipeResult } from '../types';
+import { PromptBlueprint, GenericRecipeResult, GoalContractData } from '../types';
 
 interface BlueprintExplorerProps {
   blueprint: PromptBlueprint | null;
@@ -42,9 +42,10 @@ interface BlueprintExplorerProps {
   setGenerationMode: (mode: 'mock' | 'gemini' | 'custom_openai') => void;
   setGeminiError: (val: string | null) => void;
   debugMode: boolean;
+  onOpenGoalBuilder?: (data: Partial<GoalContractData>) => void;
 }
 
-export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
+export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = React.memo(({
   blueprint,
   recipeResult,
   validationErrors,
@@ -67,7 +68,8 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
   onExportVibePacket,
   setGenerationMode,
   setGeminiError,
-  debugMode
+  debugMode,
+  onOpenGoalBuilder
 }) => {
   if (isGenerating) return null;
 
@@ -80,7 +82,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
         <div className="px-4 py-3 bg-slate-950/20 border-b border-[#1F1F1F] flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-amber-400">✨</span>
-            <span className="text-[10px] font-mono tracking-wider uppercase font-bold text-[#D4AF37]">
+            <span className="text-[10px] font-mono tracking-wider uppercase font-bold text-primary">
               Recipe: {recipeResult.recipeId.replace(/_/g, ' ')}
             </span>
           </div>
@@ -89,25 +91,25 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
             <button
               type="button"
               onClick={() => onCopy(recipeResult.content, 'Recipe Output')}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
               title="Copy output text to clipboard"
             >
-              <Copy className="h-3.5 w-3.5 text-[#D4AF37]" /> Copy Content
+              <Copy className="h-3.5 w-3.5 text-primary" /> Copy Content
             </button>
             <button
               type="button"
               onClick={() => onExportMarkdown()}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
               title="Export as Markdown file"
             >
-              <Download className="h-3.5 w-3.5 text-[#D4AF37]" /> Export Markdown
+              <Download className="h-3.5 w-3.5 text-primary" /> Export Markdown
             </button>
           </div>
         </div>
 
         {/* Content Explorer */}
         <div className="p-5 border-b border-[#1F1F1F] bg-[#161616]/20">
-          <h2 className="font-serif text-lg md:text-xl font-bold text-[#D4AF37] italic flex items-center gap-2 leading-snug">
+          <h2 className="font-sans text-sm md:text-base font-extrabold tracking-wider uppercase text-primary flex items-center gap-2 leading-snug">
             {recipeResult.title}
           </h2>
           <p className="text-[10px] text-slate-500 font-mono mt-1">FORMAT: {recipeResult.outputKind.toUpperCase()}</p>
@@ -131,7 +133,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-serif font-bold text-rose-300 text-sm">
+            <h3 className="font-sans font-bold text-xs uppercase tracking-wider text-rose-300">
               Schema Validation Failed
             </h3>
             <p className="text-xs text-rose-400/80 mt-0.5 leading-normal">
@@ -176,7 +178,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <h3 className="font-serif font-bold text-rose-300 text-sm">
+            <h3 className="font-sans font-bold text-xs uppercase tracking-wider text-rose-300">
               Gemini Service Refinement Failed
             </h3>
             <p className="text-xs text-rose-400/80 mt-1 leading-relaxed">
@@ -189,14 +191,14 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                   setGenerationMode('mock');
                   setGeminiError(null);
                 }}
-                className="text-[10px] font-mono uppercase bg-[#161616] hover:bg-[#222222] text-[#D4AF37] px-3 py-1.5 rounded-lg border border-[#262626] cursor-pointer transition font-bold"
+                className="text-[10px] font-mono uppercase bg-[#161616] hover:bg-[#222222] text-primary px-3 py-1.5 rounded-lg border border-[#262626] cursor-pointer transition font-bold"
               >
                 🎭 Use Mock Fallback
               </button>
               <button
                 type="button"
                 onClick={onEnhancePrompt}
-                className="text-[10px] font-mono uppercase bg-[#D4AF37] hover:bg-[#C09E32] text-black px-3 py-1.5 rounded-lg cursor-pointer transition font-bold"
+                className="text-[10px] font-mono uppercase bg-primary hover:bg-primary-hover text-black px-3 py-1.5 rounded-lg cursor-pointer transition font-bold"
               >
                 🔄 Retry Pipeline
               </button>
@@ -235,42 +237,59 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
             <button
               type="button"
               onClick={() => onCopy(JSON.stringify(blueprint, null, 2), 'JSON Schema')}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
               title="Copy full parsed blueprint JSON code to clipboard"
             >
-              <Copy className="h-3 w-3 text-[#D4AF37]" /> Copy JSON
+              <Copy className="h-3 w-3 text-primary" /> Copy JSON
             </button>
             <button
               type="button"
               onClick={onExportJSON}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
               title="Download full parsed template blueprint JSON file"
             >
-              <Download className="h-3 w-3 text-[#D4AF37]" /> Export JSON
+              <Download className="h-3 w-3 text-primary" /> Export JSON
             </button>
             <button
               type="button"
               onClick={onExportMarkdown}
-              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
               title="Download final system enhancer prompt as TXT/Markdown (.md)"
             >
-              <ClipboardCheck className="h-3 w-3 text-[#D4AF37]" /> Export Prompt
+              <ClipboardCheck className="h-3 w-3 text-primary" /> Export Prompt
             </button>
             <button
               type="button"
               onClick={onExportVibePacket}
-              className="text-[10px] bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
+              className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider"
               title="Download the full conversation history, project context, raw prompts and requirements inside a single consolidated vibe packet file"
             >
-              <Sparkles className="h-3 text-[#D4AF37]" /> Vibe Packet
+              <Sparkles className="h-3 text-primary" /> Vibe Packet
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!blueprint) return;
+                onOpenGoalBuilder?.({
+                  title: blueprint.title,
+                  objective: `${blueprint.summary}\n\nCore Objectives:\n${(blueprint.problem_clarification?.core_objectives || []).map(o => `- ${o}`).join('\n')}\n\nMust-Have Requirements:\n${(blueprint.functional_requirements?.must_have || []).map(req => `- ${req}`).join('\n')}`,
+                  includedAssets: (blueprint.user_experience?.component_list || []).join('\n'),
+                  verificationCommand: 'npm run test',
+                  successMetric: 'All tests pass successfully.'
+                });
+              }}
+              className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2 md:px-2.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider animate-pulse-subtle"
+              title="Open the interactive /goal builder side-drawer to customize a system execution contract"
+            >
+              <Sliders className="h-3 text-primary" /> /goal Builder
             </button>
           </div>
         </div>
 
         {/* Main output header */}
         <div className="p-5 border-b border-[#1F1F1F] bg-[#161616]/20">
-          <h2 className="font-serif text-lg md:text-xl font-bold text-[#D4AF37] italic flex items-center gap-2 leading-snug">
-            <Code className="h-4.5 w-4.5 text-[#D4AF37]" /> {blueprint.title}
+          <h2 className="font-sans text-sm md:text-base font-extrabold tracking-wider uppercase text-primary flex items-center gap-2 leading-snug">
+            <Code className="h-4.5 w-4.5 text-primary" /> {blueprint.title}
           </h2>
           <p className="text-xs text-slate-300 leading-relaxed mt-1.5">{blueprint.summary}</p>
           
@@ -282,7 +301,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
             <span className={`text-[9px] font-mono uppercase px-2 py-1 rounded-md border tracking-wider font-semibold ${
               blueprint.intent_classification.request_type === 'new_build'
                 ? 'bg-emerald-950/20 text-emerald-400 border-emerald-900/30'
-                : 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20'
+                : 'bg-primary/10 text-primary border-primary/20'
             }`}>
               TYPE: {blueprint.intent_classification.request_type}
             </span>
@@ -311,7 +330,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-3.5 text-[10px] font-mono uppercase tracking-widest border-b-2 whitespace-nowrap transition cursor-pointer font-bold ${
                   activeTab === tab
-                    ? 'border-[#D4AF37] text-[#D4AF37] bg-[#D4AF37]/5'
+                    ? 'border-primary text-primary bg-primary/5'
                     : 'border-transparent text-slate-400 hover:text-slate-300 hover:bg-[#161616]/50'
                 }`}
               >
@@ -330,8 +349,8 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               
               {/* Title & Summary Refined Block */}
               <div className="bg-[#161616]/40 border border-[#262626] rounded-xl p-4.5">
-                <div className="text-[9px] text-[#D4AF37] font-mono uppercase tracking-widest mb-1.5 font-bold">REFINED TARGET</div>
-                <h3 className="font-serif text-base font-bold italic text-slate-100 mb-2">
+                <div className="text-[9px] text-primary font-mono uppercase tracking-widest mb-1.5 font-bold">REFINED TARGET</div>
+                <h3 className="font-sans text-sm font-bold uppercase tracking-wider text-slate-100 mb-2">
                   {blueprint.title || "Not specified"}
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">
@@ -341,7 +360,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-[#262626]/60 pt-3">
                   <div className="bg-black/30 p-2.5 rounded-lg border border-[#262626]/40">
                     <span className="text-[9px] text-slate-500 font-mono uppercase block mb-0.5 tracking-wider">Request Type</span>
-                    <span className="text-xs font-mono font-semibold capitalize text-[#D4AF37]">
+                    <span className="text-xs font-mono font-semibold capitalize text-primary">
                       {blueprint.intent_classification.request_type ? blueprint.intent_classification.request_type.replace(/_/g, ' ') : "Not specified"}
                     </span>
                   </div>
@@ -364,7 +383,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
 
               {/* Problem Expanded Description */}
               <div className="flex flex-col gap-2">
-                <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                   Expanded Problem Statement
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed bg-[#161616]/40 border border-[#262626] p-4 rounded-xl">
@@ -376,7 +395,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-[#161616]/40 border border-[#262626] rounded-xl p-4">
                   <h4 className="text-[10px] font-mono font-bold text-slate-200 tracking-wider uppercase mb-2.5 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span> Core Objectives
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Core Objectives
                   </h4>
                   {blueprint.problem_clarification.core_objectives && blueprint.problem_clarification.core_objectives.length > 0 ? (
                     <ul className="text-xs text-slate-350 leading-loose list-disc list-inside flex flex-col gap-1.5">
@@ -391,7 +410,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
 
                 <div className="bg-[#161616]/40 border border-[#262626] rounded-xl p-4">
                   <h4 className="text-[10px] font-mono font-bold text-slate-200 tracking-wider uppercase mb-2.5 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span> Target Demographics
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Target Demographics
                   </h4>
                   {blueprint.problem_clarification.primary_users && blueprint.problem_clarification.primary_users.length > 0 ? (
                     <ul className="text-xs text-slate-350 leading-loose list-disc list-inside flex flex-col gap-1.5">
@@ -407,7 +426,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
 
               {/* Constraint Parameters */}
               <div className="flex flex-col gap-2.5">
-                <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                   Scope Boundaries & Constraints
                 </h3>
                 {blueprint.problem_clarification.constraints && blueprint.problem_clarification.constraints.length > 0 ? (
@@ -428,7 +447,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
 
               {/* Assumptions Cards Block */}
               <div className="flex flex-col gap-2.5">
-                <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                   Engineering Hypotheses & Assumptions
                 </h3>
                 {blueprint.problem_clarification.assumptions && blueprint.problem_clarification.assumptions.length > 0 ? (
@@ -520,7 +539,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                           {revisionCount > 0 && (
                             <>
                               <span className="w-1 h-1 rounded-full bg-slate-700"></span>
-                              <span className="text-xs text-[#D4AF37] font-mono">
+                              <span className="text-xs text-primary font-mono">
                                 Revision Cycle #{revisionCount}
                               </span>
                             </>
@@ -543,7 +562,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                         className={`text-xs font-mono uppercase font-bold px-4 py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
                           Object.values(rejectionStates).filter((x: any) => x.rejected).length === 0
                             ? 'bg-[#1E1E1E] border border-[#262626] text-slate-600 cursor-not-allowed'
-                            : 'bg-[#D4AF37] hover:bg-[#C09E32] text-black font-bold shadow-lg shadow-[#D4AF37]/15'
+                            : 'bg-primary hover:bg-primary-hover text-black font-bold shadow-lg shadow-primary/15'
                         }`}
                       >
                         {isRefining ? (
@@ -580,7 +599,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
             <div className="flex flex-col gap-6 animate-fade-in" id="tab-reqs-view">
               
               <div className="flex flex-col gap-1.5">
-                <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                   Functional Boundaries (MoSCoW Matrix)
                 </h3>
                 <p className="text-[11px] text-slate-400">Strictly governs development scope. Promotes high visual craft within finite goals.</p>
@@ -611,18 +630,18 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 </div>
 
                 {/* Should Have */}
-                <div className="border border-[#D4AF37]/20 bg-[#D4AF37]/5 rounded-xl p-4">
-                  <div className="flex items-center justify-between border-b border-[#D4AF37]/15 pb-2 mb-3">
-                    <h4 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-wider flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#D4AF37]"></span> Should Have
+                <div className="border border-primary/20 bg-primary/5 rounded-xl p-4">
+                  <div className="flex items-center justify-between border-b border-primary/15 pb-2 mb-3">
+                    <h4 className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-primary"></span> Should Have
                     </h4>
-                    <span className="text-[9px] text-[#D4AF37] font-mono uppercase bg-[#D4AF37]/10 border border-[#D4AF37]/25 px-1.5 py-0.5 rounded font-bold tracking-wider">Enhancement</span>
+                    <span className="text-[9px] text-primary font-mono uppercase bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded font-bold tracking-wider">Enhancement</span>
                   </div>
                   {blueprint.functional_requirements.should_have && blueprint.functional_requirements.should_have.length > 0 ? (
                     <ul className="text-xs text-slate-300 flex flex-col gap-2.5 list-none">
                       {blueprint.functional_requirements.should_have.map((itm, i) => (
                         <li key={i} className="flex gap-2 items-start leading-relaxed animate-fade-in">
-                          <span className="text-[#D4AF37] font-bold select-none">•</span>
+                          <span className="text-primary font-bold select-none">•</span>
                           <span>{itm}</span>
                         </li>
                       ))}
@@ -687,33 +706,33 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               
               {/* General Framework matrix */}
               <div className="flex flex-col gap-2.5">
-                <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                   Tech Stack Allocations
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="bg-[#161616]/45 border border-[#262626] p-3.5 rounded-xl flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Paradigm</span>
-                    <span className="text-xs font-semibold font-mono text-[#D4AF37]">{blueprint.architecture.paradigm || "Not specified"}</span>
+                    <span className="text-xs font-semibold font-mono text-primary">{blueprint.architecture.paradigm || "Not specified"}</span>
                   </div>
                   <div className="bg-[#161616]/45 border border-[#262626] p-3.5 rounded-xl flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Frontend Framework</span>
-                    <span className="text-xs font-semibold font-mono text-[#D4AF37]">{blueprint.architecture.frontend || "Not specified"}</span>
+                    <span className="text-xs font-semibold font-mono text-primary">{blueprint.architecture.frontend || "Not specified"}</span>
                   </div>
                   <div className="bg-[#161616]/45 border border-[#262626] p-3.5 rounded-xl flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Backend Tier</span>
-                    <span className="text-xs font-semibold font-mono text-[#D4AF37]">{blueprint.architecture.backend || "Not specified"}</span>
+                    <span className="text-xs font-semibold font-mono text-primary">{blueprint.architecture.backend || "Not specified"}</span>
                   </div>
                   <div className="bg-[#161616]/45 border border-[#262626] p-3.5 rounded-xl flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Database Platform</span>
-                    <span className="text-xs font-semibold font-mono text-[#D4AF37]">{blueprint.architecture.database || "Not specified"}</span>
+                    <span className="text-xs font-semibold font-mono text-primary">{blueprint.architecture.database || "Not specified"}</span>
                   </div>
                   <div className="bg-[#161616]/45 border border-[#262626] p-3.5 rounded-xl flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">APIs & Protocols</span>
-                    <span className="text-xs font-semibold font-mono text-[#D4AF37]">{blueprint.architecture.apis || "Not specified"}</span>
+                    <span className="text-xs font-semibold font-mono text-primary">{blueprint.architecture.apis || "Not specified"}</span>
                   </div>
                   <div className="bg-[#161616]/45 border border-[#262626] p-3.5 rounded-xl flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">Infrastructure & Host</span>
-                    <span className="text-xs font-semibold font-mono text-[#D4AF37]">{blueprint.architecture.infra || "Not specified"}</span>
+                    <span className="text-xs font-semibold font-mono text-primary">{blueprint.architecture.infra || "Not specified"}</span>
                   </div>
                 </div>
               </div>
@@ -730,7 +749,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in">
                     {blueprint.architecture.services.map((srv, idx) => (
                       <div key={idx} className="bg-[#0A0A0A] border border-[#262626] p-2.5 px-3 rounded-lg flex items-center gap-2 font-mono text-[11px] text-slate-300">
-                        <span className="text-[#D4AF37] text-xs font-bold shrink-0">⚙</span>
+                        <span className="text-primary text-xs font-bold shrink-0">⚙</span>
                         <span>{srv}</span>
                       </div>
                     ))}
@@ -764,7 +783,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
 
               {/* Infrastructure & DevOps Strategy */}
               <div className="flex flex-col gap-2">
-                <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                   DevOps Strategy & Release Engineering
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed bg-[#161616]/40 border border-[#262626] p-4 rounded-xl font-mono text-[11.5px]">
@@ -785,7 +804,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 {/* Data models column */}
                 <div className="flex flex-col gap-4 bg-[#161616]/20 border border-[#262626] p-4.5 rounded-xl">
                   <div>
-                    <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest mb-1 animate-pulse">
+                    <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest mb-1 animate-pulse">
                       Memory States & Entity Schemas
                     </h3>
                     <p className="text-[10px] text-slate-500">Persistent database models, schema contracts, and logic models.</p>
@@ -821,7 +840,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 {/* Visual Styles Column */}
                 <div className="flex flex-col gap-4 bg-[#161616]/20 border border-[#262626] p-4.5 rounded-xl">
                   <div>
-                    <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest mb-1">
+                    <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest mb-1">
                       Aesthetic Pairings & UX
                     </h3>
                     <p className="text-[10px] text-slate-500">Styling targets, spatial systems, and user navigation frameworks.</p>
@@ -848,23 +867,23 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               {/* Animations, Interaction states, Accessibility Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-[#161616]/40 border border-[#262626] p-4 rounded-xl flex flex-col gap-2">
-                  <h4 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-wider">Animations Guide</h4>
+                  <h4 className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">Animations Guide</h4>
                   <p className="text-xs text-slate-300 leading-normal bg-[#0A0A0A]/40 border border-[#262626]/40 p-2.5 rounded-lg">
                     {blueprint.user_experience.animations || "Not specified"}
                   </p>
                 </div>
                 <div className="bg-[#161616]/40 border border-[#262626] p-4 rounded-xl flex flex-col gap-2">
-                  <h4 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-wider">Accessibility Standards</h4>
+                  <h4 className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">Accessibility Standards</h4>
                   <p className="text-xs text-slate-300 leading-normal bg-[#0A0A0A]/40 border border-[#262626]/40 p-2.5 rounded-lg">
                     {blueprint.user_experience.accessibility || "Not specified"}
                   </p>
                 </div>
                 <div className="bg-[#161616]/40 border border-[#262626] p-4 rounded-xl flex flex-col gap-2">
-                  <h4 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-wider">UI Interaction States</h4>
+                  <h4 className="text-[10px] font-mono font-bold text-primary uppercase tracking-wider">UI Interaction States</h4>
                   {blueprint.user_experience.interaction_states && blueprint.user_experience.interaction_states.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {blueprint.user_experience.interaction_states.map((st, idx) => (
-                        <span key={idx} className="bg-[#D4AF37]/15 border border-[#D4AF37]/25 text-[#D4AF37] text-[9px] font-mono px-2 py-0.5 rounded">
+                        <span key={idx} className="bg-primary/15 border border-primary/25 text-primary text-[9px] font-mono px-2 py-0.5 rounded">
                           {st}
                         </span>
                       ))}
@@ -883,7 +902,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 {blueprint.user_experience.component_list && blueprint.user_experience.component_list.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {blueprint.user_experience.component_list.map((comp, idx) => (
-                      <span key={idx} className="bg-[#0A0A0A] hover:bg-[#111111] border border-[#262626] text-[#D4AF37] text-[10px] font-mono px-3 py-1.5 rounded-lg transition font-semibold">
+                      <span key={idx} className="bg-[#0A0A0A] hover:bg-[#111111] border border-[#262626] text-primary text-[10px] font-mono px-3 py-1.5 rounded-lg transition font-semibold">
                         {`<${comp} />`}
                       </span>
                     ))}
@@ -902,7 +921,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                   <div className="flex flex-col gap-2.5">
                     {blueprint.user_experience.user_flows.map((fl, idx) => (
                       <div key={idx} className="flex gap-3 bg-[#0A0A0A] border border-[#262626] p-3 rounded-xl items-start">
-                        <span className="bg-[#D4AF37]/15 text-[#D4AF37] font-mono text-[10px] w-6 h-6 rounded-full flex items-center justify-center font-bold border border-[#D4AF37]/25 shrink-0">
+                        <span className="bg-primary/15 text-primary font-mono text-[10px] w-6 h-6 rounded-full flex items-center justify-center font-bold border border-primary/25 shrink-0">
                           {idx + 1}
                         </span>
                         <p className="text-xs text-slate-300 leading-normal font-sans mt-0.5">{fl}</p>
@@ -924,7 +943,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               {/* Security Parameters group */}
               <div className="bg-[#161616]/30 border border-[#262626] rounded-xl p-4.5 flex flex-col gap-4">
                 <div>
-                  <h4 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest mb-1">
+                  <h4 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest mb-1">
                     Security & Authorization Rules
                   </h4>
                   <p className="text-[10px] text-slate-500">Critical privacy gates, token algorithms, and payload hygiene.</p>
@@ -965,7 +984,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               {/* Performance targets */}
               <div className="bg-[#161616]/30 border border-[#262626] rounded-xl p-4.5 flex flex-col gap-4">
                 <div>
-                  <h4 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest mb-1">
+                  <h4 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest mb-1">
                     Performance & SLA Targets
                   </h4>
                   <p className="text-[10px] text-slate-500">Target latency, local machine bounds, and operational scales.</p>
@@ -978,7 +997,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                   </div>
                   <div className="bg-[#0A0A0A] p-3 rounded-lg border border-[#262626]">
                     <span className="font-bold text-slate-500 text-[9px] block mb-1 tracking-wide font-mono uppercase">Max Load Latency Bounds</span>
-                    <p className="font-mono text-[11px] text-[#D4AF37] font-bold">{blueprint.performance_constraints.latency || "Not specified"}</p>
+                    <p className="font-mono text-[11px] text-primary font-bold">{blueprint.performance_constraints.latency || "Not specified"}</p>
                   </div>
                   <div className="bg-[#0A0A0A] p-3 rounded-lg border border-[#262626]">
                     <span className="font-bold text-slate-500 text-[9px] block mb-1 tracking-wide font-mono uppercase">Expected Load Volume</span>
@@ -1038,7 +1057,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest animate-pulse">
+                  <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest animate-pulse">
                     Refined Execution Prompt
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-1">Copy this detailed directive directly into secondary coding agents.</p>
@@ -1046,7 +1065,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 <button
                   type="button"
                   onClick={() => onCopy(blueprint.final_prompt, 'Refined Prompt')}
-                  className="bg-[#D4AF37] hover:bg-[#C09E32] text-black text-[10px] font-mono uppercase font-bold px-3 py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer shadow-lg shadow-[#D4AF37]/15"
+                  className="bg-primary hover:bg-primary-hover text-black text-[10px] font-mono uppercase font-bold px-3 py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer shadow-lg shadow-primary/15"
                 >
                   <Copy className="h-3.5 w-3.5" /> Copy Prompt
                 </button>
@@ -1056,21 +1075,32 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#161616]/40 border border-[#262626] p-3 rounded-lg text-center font-mono">
                   <span className="text-[9px] text-slate-500 uppercase block tracking-wider">Total Characters</span>
-                  <span className="text-sm font-semibold text-[#D4AF37]">{blueprint.final_prompt.length} CHR</span>
+                  <span className="text-sm font-semibold text-primary">{blueprint.final_prompt.length} CHR</span>
                 </div>
                 <div className="bg-[#161616]/40 border border-[#262626] p-3 rounded-lg text-center font-mono">
                   <span className="text-[9px] text-slate-500 uppercase block tracking-wider">Estimated Word Count</span>
-                  <span className="text-sm font-semibold text-[#D4AF37]">
+                  <span className="text-sm font-semibold text-primary">
                     {blueprint.final_prompt.trim().split(' ').filter((w) => w.length > 0).length} WRD
                   </span>
                 </div>
               </div>
 
-              <div className="bg-[#0A0A0A] border-2 border-[#D4AF37]/20 focus-within:border-[#D4AF37]/50 rounded-xl overflow-hidden shadow-2xl relative">
+              <div className="bg-[#0A0A0A] border-2 border-primary/20 focus-within:border-primary/50 rounded-xl overflow-hidden shadow-2xl relative group">
                 <div className="px-4 py-2 bg-[#111111] border-b border-[#262626] text-[10px] text-slate-500 flex items-center justify-between font-mono tracking-wider font-bold">
                   <span>AGENT DIRECTIVE PAYLOAD</span>
-                  <span className="text-[#D4AF37]">PRESERVES RAW LAYOUT WHITESPACE</span>
+                  <span className="text-primary">PRESERVES RAW LAYOUT WHITESPACE</span>
                 </div>
+                
+                {/* Floating Quick Copy button */}
+                <button
+                  type="button"
+                  onClick={() => onCopy(blueprint.final_prompt, 'Refined Prompt')}
+                  className="absolute right-3 top-12 z-10 bg-primary hover:bg-primary-hover text-black p-2.5 rounded-lg shadow-lg hover:scale-105 transition cursor-pointer md:opacity-0 md:group-hover:opacity-100 duration-200"
+                  title="Copy refined prompt"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+
                 <textarea
                   readOnly
                   rows={15}
@@ -1080,8 +1110,8 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                 />
               </div>
 
-              <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-xl p-4 text-xs text-[#D4AF37]/90 leading-relaxed flex items-start gap-3">
-                <div className="p-1 px-1.5 bg-[#D4AF37]/10 text-[#D4AF37] rounded">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-xs text-primary/90 leading-relaxed flex items-start gap-3">
+                <div className="p-1 px-1.5 bg-primary/10 text-primary rounded">
                   <Zap className="h-4.5 w-4.5" />
                 </div>
                 <p>
@@ -1098,7 +1128,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase tracking-widest">
+                  <h3 className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">
                     Raw Blueprint JSON Spec
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-1">Detailed metadata parsed matching Schema version '1.0' contract.</p>
@@ -1107,14 +1137,14 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
                   <button
                     type="button"
                     onClick={() => onCopy(JSON.stringify(blueprint, null, 2), 'JSON Specification')}
-                    className="bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] text-[10px] font-mono uppercase font-bold px-3 py-2.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
+                    className="bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] text-[10px] font-mono uppercase font-bold px-3 py-2.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
                   >
                     <Copy className="h-3.5 w-3.5" /> Copy JSON
                   </button>
                   <button
                     type="button"
                     onClick={onExportJSON}
-                    className="bg-[#D4AF37] hover:bg-[#C09E32] text-black text-[10px] font-mono uppercase font-bold px-3 py-2.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer shadow-lg shadow-[#D4AF37]/20"
+                    className="bg-primary hover:bg-primary-hover text-black text-[10px] font-mono uppercase font-bold px-3 py-2.5 rounded-lg flex items-center gap-1.5 transition cursor-pointer shadow-lg shadow-primary/20"
                   >
                     <Download className="h-3.5 w-3.5" /> Download
                   </button>
@@ -1124,7 +1154,7 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
               <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl overflow-hidden shadow-2xl relative">
                 <div className="px-4 py-2 bg-[#111111] border-b border-[#262626] text-[10px] text-slate-500 flex items-center justify-between font-mono tracking-wider font-bold">
                   <span>PARSED METADATA SPECIFICATION</span>
-                  <span className="text-[#D4AF37]">SCHEMA_VERSION "1.0"</span>
+                  <span className="text-primary">SCHEMA_VERSION "1.0"</span>
                 </div>
                 <pre className="font-mono text-xs text-emerald-400 leading-relaxed p-4 max-h-[360px] overflow-y-auto block whitespace-pre bg-black">
                   {JSON.stringify(blueprint, null, 2)}
@@ -1164,5 +1194,5 @@ export const BlueprintExplorer: React.FC<BlueprintExplorerProps> = ({
   }
 
   return null;
-};
+});
 export type BlueprintExplorerComponent = typeof BlueprintExplorer;

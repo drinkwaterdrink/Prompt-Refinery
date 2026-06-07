@@ -13,13 +13,13 @@ import {
   ShieldCheck,
   ChevronDown, 
   ChevronUp, 
-  Play, 
   ArrowRight,
   ClipboardCheck,
   Zap,
-  Info
+  Info,
+  Sliders
 } from 'lucide-react';
-import { ProjectImprovementResult, SuggestedImprovement } from '../types';
+import { ProjectImprovementResult, SuggestedImprovement, GoalContractData } from '../types';
 
 interface ProjectWorkspaceProps {
   result: ProjectImprovementResult | null;
@@ -29,16 +29,18 @@ interface ProjectWorkspaceProps {
   onUseAsRawPrompt: (phasePrompt: string, projectSummary: string) => void;
   onSendToPipeline: (phasePrompt: string, projectSummary: string) => void;
   showToast: (msg: string) => void;
+  onOpenGoalBuilder?: (data: Partial<GoalContractData>) => void;
 }
 
-export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
+export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = React.memo(({
   result,
   isGeneratingProject,
   projectError,
   onCopy,
   onUseAsRawPrompt,
   onSendToPipeline,
-  showToast
+  showToast,
+  onOpenGoalBuilder
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
@@ -137,7 +139,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
   const getCategoryStyles = (cat: string) => {
     switch (cat) {
       case 'feature': return 'bg-emerald-950/40 border border-emerald-900/30 text-emerald-400';
-      case 'ux': return 'bg-amber-950/40 border border-amber-900/30 text-[#D4AF37]';
+      case 'ux': return 'bg-amber-950/40 border border-amber-900/30 text-primary';
       case 'bugfix': return 'bg-rose-950/40 border border-rose-900/30 text-rose-400';
       case 'refactor': return 'bg-purple-950/40 border border-purple-900/30 text-purple-400';
       case 'performance': return 'bg-cyan-950/40 border border-cyan-900/30 text-cyan-400';
@@ -162,13 +164,13 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 min-h-[500px]" id="project-generating-state">
         <div className="relative mb-4">
-          <div className="h-14 w-14 rounded-full border-2 border-[#D4AF37]/20 border-t-[#D4AF37] animate-spin" />
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-mono text-[#D4AF37] font-semibold animate-pulse">
+          <div className="h-14 w-14 rounded-full border-2 border-primary/20 border-t-[#00e5ff] animate-spin" />
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-mono text-primary font-semibold animate-pulse">
             AUDIT
           </span>
         </div>
         <div className="text-center max-w-sm">
-          <h3 className="font-serif text-[#D4AF37] italic font-bold text-base leading-snug">Auditing Codebase Context</h3>
+          <h3 className="font-sans text-primary font-bold text-sm tracking-wider uppercase leading-snug">Auditing Codebase Context</h3>
           <p className="text-[11px] text-slate-500 mt-2 font-mono leading-relaxed uppercase tracking-wider animate-pulse">
             Analyzing README, files list, & directions...
           </p>
@@ -186,7 +188,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
         <div className="bg-[#1F1414] border border-rose-950/30 p-4 rounded-xl flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h3 className="font-serif font-bold text-rose-300 text-sm">Codebase Audit Failed</h3>
+            <h3 className="font-sans font-bold text-xs uppercase tracking-wider text-rose-300">Codebase Audit Failed</h3>
             <p className="text-xs text-rose-400/80 mt-1 leading-relaxed">{projectError}</p>
           </div>
         </div>
@@ -202,9 +204,9 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
       {/* Overview Header Actions */}
       <div className="px-5 py-4 bg-slate-950/20 border-b border-[#1F1F1F] flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div>
-          <h2 className="font-serif text-base font-bold text-[#D4AF37] italic">Codebase Review & Optimization</h2>
+          <h2 className="font-sans text-sm font-bold tracking-wider uppercase text-primary">Codebase Review & Optimization</h2>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[9px] bg-[#161616] text-[#D4AF37] px-2 py-0.5 rounded border border-[#262626] font-mono uppercase font-semibold">
+            <span className="text-[9px] bg-[#161616] text-primary px-2 py-0.5 rounded border border-[#262626] font-mono uppercase font-semibold">
               Project Mode
             </span>
             <span className="text-slate-500 text-xs font-mono truncate max-w-[200px]">
@@ -217,7 +219,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
           <button
             type="button"
             onClick={handleExportMarkdown}
-            className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center"
+            className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center"
             title="Download full project review plan as Markdown"
           >
             <Download className="h-3.5 w-3.5" /> Export Plan MD
@@ -225,10 +227,27 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
           <button
             type="button"
             onClick={handleExportJSON}
-            className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] hover:border-[#D4AF37]/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center"
+            className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] hover:border-primary/50 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center"
             title="Download full project review plan data as JSON"
           >
             <Layers className="h-3.5 w-3.5" /> Export Plan JSON
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!result) return;
+              onOpenGoalBuilder?.({
+                title: `${result.projectName} - NEXT PHASE`,
+                objective: `Recommended Next Phase:\n${result.recommended_next_phase}\n\nProject Context Summary:\n${result.project_summary}\n\nKey Tasks / Improvements:\n${result.suggested_improvements.map(i => `- ${i.title}: ${i.summary}`).join('\n')}`,
+                includedAssets: '',
+                verificationCommand: 'npm run build',
+                successMetric: 'Build compiles successfully with zero errors.'
+              });
+            }}
+            className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center animate-pulse-subtle"
+            title="Open the interactive /goal builder side-drawer to customize a system execution contract"
+          >
+            <Sliders className="h-3.5 w-3.5" /> /goal Builder
           </button>
         </div>
       </div>
@@ -239,7 +258,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
         {/* Core summary and app type overview */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <div className="md:col-span-8 bg-[#111111] border border-[#1F1F1F] rounded-xl p-4 flex flex-col gap-2">
-            <h3 className="text-[10px] font-mono tracking-widest font-bold text-[#D4AF37] uppercase">Project Summary</h3>
+            <h3 className="text-[10px] font-mono tracking-widest font-bold text-primary uppercase">Project Summary</h3>
             <p className="text-xs text-slate-300 leading-relaxed font-sans">{result.project_summary}</p>
           </div>
           <div className="md:col-span-4 bg-[#111111] border border-[#1F1F1F] rounded-xl p-4 flex flex-col gap-2 justify-center">
@@ -251,11 +270,11 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
         </div>
 
         {/* Recommended Next Dev Phase Gradient Highlight Card */}
-        <div className="bg-gradient-to-r from-amber-950/20 via-black to-[#D4AF37]/5 border border-[#D4AF37]/20 p-4.5 rounded-xl flex items-start gap-3">
-          <Zap className="h-5 w-5 text-[#D4AF37] shrink-0 mt-0.5 animate-pulse" />
+        <div className="bg-gradient-to-r from-amber-950/20 via-black to-[#00e5ff]/5 border border-primary/20 p-4.5 rounded-xl flex items-start gap-3">
+          <Zap className="h-5 w-5 text-primary shrink-0 mt-0.5 animate-pulse" />
           <div>
-            <h3 className="text-xs font-bold font-mono uppercase text-[#D4AF37] tracking-wider">Recommended Next Development Phase</h3>
-            <p className="text-xs text-slate-300 leading-relaxed mt-1 font-serif italic">{result.recommended_next_phase}</p>
+            <h3 className="text-xs font-bold font-mono uppercase text-primary tracking-wider">Recommended Next Development Phase</h3>
+            <p className="text-xs text-slate-300 leading-relaxed mt-1 font-sans font-semibold tracking-wide uppercase text-secondary">{result.recommended_next_phase}</p>
           </div>
         </div>
 
@@ -293,7 +312,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
               onClick={() => toggleSection('strengths')}
               className="w-full px-4 py-3 bg-black/30 hover:bg-black/50 border-b border-[#1F1F1F] flex items-center justify-between text-left transition"
             >
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                 <ShieldCheck className="h-4 w-4" /> Codebase Strengths ({result.strengths.length})
               </span>
               {collapsedSections.strengths ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronUp className="h-4 w-4 text-slate-500" />}
@@ -301,8 +320,8 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
             {!collapsedSections.strengths && (
               <div className="p-4 bg-black/10 flex flex-col gap-2 font-sans text-xs text-slate-350 leading-relaxed">
                 {result.strengths.map((item, idx) => (
-                  <div key={idx} className="flex gap-2 items-start bg-[#1F1C14] border border-[#D4AF37]/10 p-2.5 rounded-lg">
-                    <span className="text-[#D4AF37] select-none font-bold font-mono">•</span>
+                  <div key={idx} className="flex gap-2 items-start bg-[#1F1C14] border border-primary/10 p-2.5 rounded-lg">
+                    <span className="text-primary select-none font-bold font-mono">•</span>
                     <span>{item}</span>
                   </div>
                 ))}
@@ -352,7 +371,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
                   <p className="text-[10px] text-slate-550 font-mono italic">No file contexts extracted</p>
                 ) : (
                   result.known_context_used.map(f => (
-                    <span key={f} className="text-[10px] font-mono bg-[#161616] text-[#D4AF37] border border-[#262626] px-2 py-1 rounded-md font-semibold">
+                    <span key={f} className="text-[10px] font-mono bg-[#161616] text-primary border border-[#262626] px-2 py-1 rounded-md font-semibold">
                       📄 {f}
                     </span>
                   ))
@@ -365,14 +384,14 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
 
         {/* Suggested Improvements Section */}
         <div className="flex flex-col gap-4 mt-2">
-          <h3 className="text-[10px] font-mono tracking-widest font-bold text-[#D4AF37] uppercase flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+          <h3 className="text-[10px] font-mono tracking-widest font-bold text-primary uppercase flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
             Suggested Atomic Codebase Improvements
           </h3>
 
           <div className="grid grid-cols-1 gap-6">
             {result.suggested_improvements.map((st) => (
-              <div key={st.id} className="bg-[#111111] border border-[#1F1F1F] hover:border-[#D4AF37]/25 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col">
+              <div key={st.id} className="bg-[#111111] border border-[#1F1F1F] hover:border-primary/25 rounded-2xl overflow-hidden transition-all duration-300 flex flex-col">
                 
                 {/* Improvement Card Header */}
                 <div className="px-5 py-4 bg-black/30 border-b border-[#1F1F1F] flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
@@ -402,7 +421,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
                   <div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">{st.summary}</p>
                     <p className="text-[11px] text-slate-500 mt-2 font-mono leading-relaxed leading-snug flex items-start gap-1">
-                      <span className="text-[#D4AF37]">⚠️ Why it matters:</span> {st.why_it_matters}
+                      <span className="text-primary">⚠️ Why it matters:</span> {st.why_it_matters}
                     </p>
                   </div>
 
@@ -441,7 +460,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
                     <button
                       type="button"
                       onClick={() => handleCopyPrompt(st)}
-                      className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center w-full sm:w-auto"
+                      className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center w-full sm:w-auto"
                     >
                       {copiedId === st.id ? (
                         <>
@@ -449,7 +468,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
                         </>
                       ) : (
                         <>
-                          <Copy className="h-3.5 w-3.5 text-[#D4AF37]" /> Copy Phase Prompt
+                          <Copy className="h-3.5 w-3.5 text-primary" /> Copy Phase Prompt
                         </>
                       )}
                     </button>
@@ -457,16 +476,16 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
                     <button
                       type="button"
                       onClick={() => onUseAsRawPrompt(st.phase_prompt, result.project_summary)}
-                      className="text-[10px] bg-[#161616] hover:bg-[#222222] text-[#D4AF37] border border-[#262626] px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center w-full sm:w-auto"
+                      className="text-[10px] bg-[#161616] hover:bg-[#222222] text-primary border border-[#262626] px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center w-full sm:w-auto"
                       title="Load this prompt to Quick Blueprint config inputs and switch tabs"
                     >
-                      <Zap className="h-3.5 w-3.5 text-[#D4AF37]" /> Use as Raw Prompt
+                      <Zap className="h-3.5 w-3.5 text-primary" /> Use as Raw Prompt
                     </button>
 
                     <button
                       type="button"
                       onClick={() => onSendToPipeline(st.phase_prompt, result.project_summary)}
-                      className="text-[10px] bg-[#D4AF37] hover:bg-[#C09E32] text-black px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center w-full sm:w-auto shadow-md"
+                      className="text-[10px] bg-primary hover:bg-primary-hover text-black px-3 py-2 rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer font-bold font-mono uppercase tracking-wider justify-center w-full sm:w-auto shadow-md"
                       title="Send this compiled prompt context directly to spawns a Refinery Pipeline timelines"
                     >
                       <ArrowRight className="h-3.5 w-3.5" /> Send to Pipeline
@@ -485,4 +504,4 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({
 
     </div>
   );
-};
+});

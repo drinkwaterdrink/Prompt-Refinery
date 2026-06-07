@@ -66,11 +66,11 @@ export const ProjectPackSelector: React.FC<ProjectPackSelectorProps> = ({
 
   return (
     <div className="flex flex-col gap-2.5 bg-[#121212]/40 border border-[#222222] rounded-xl p-3.5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         
         {/* Left: Pack Selection and Label */}
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <FolderGit className="h-4.5 w-4.5 text-[#D4AF37] shrink-0" />
+        <div className="flex items-center gap-2 flex-1 min-w-[200px] w-full">
+          <FolderGit className="h-4.5 w-4.5 text-primary shrink-0" />
           <div className="flex-1 flex flex-col">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Active Project Context Pack
@@ -78,7 +78,7 @@ export const ProjectPackSelector: React.FC<ProjectPackSelectorProps> = ({
             <select
               value={activePackId || ''}
               onChange={(e) => selectActivePack(e.target.value || null)}
-              className="mt-1 w-full bg-[#121212] border border-[#262626] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-200 focus:outline-none focus:border-[#D4AF37] cursor-pointer"
+              className="mt-1 w-full bg-[#121212] border border-[#262626] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-200 focus:outline-none focus:border-primary cursor-pointer"
             >
               <option value="">None (Global Stack-Agnostic Mode)</option>
               {projectPacks.map((pack) => (
@@ -91,7 +91,7 @@ export const ProjectPackSelector: React.FC<ProjectPackSelectorProps> = ({
         </div>
 
         {/* Right: Quick Action Buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
           {/* Create Button */}
           <button
             type="button"
@@ -99,7 +99,7 @@ export const ProjectPackSelector: React.FC<ProjectPackSelectorProps> = ({
             className="p-2 text-slate-400 hover:text-white hover:bg-[#222222]/40 border border-[#262626]/60 rounded-lg transition cursor-pointer flex items-center justify-center gap-1 text-[11px] font-semibold shrink-0"
             title="Create new context pack"
           >
-            <Plus className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <Plus className="h-3.5 w-3.5 text-primary" />
             <span>New Pack</span>
           </button>
 
@@ -153,7 +153,7 @@ export const ProjectPackSelector: React.FC<ProjectPackSelectorProps> = ({
               <button
                 type="button"
                 onClick={() => onApplyContext(activePackId)}
-                className="p-2 text-[#D4AF37] hover:text-[#e5c158] hover:bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-lg transition cursor-pointer flex items-center justify-center gap-1 text-[11px] font-bold shrink-0 shadow-sm"
+                className="p-2 text-primary hover:text-primary-hover hover:bg-primary/5 border border-primary/20 rounded-lg transition cursor-pointer flex items-center justify-center gap-1 text-[11px] font-bold shrink-0 shadow-sm"
                 title="Inject pack contents as formatted Markdown into context field"
               >
                 <FileDown className="h-3.5 w-3.5" />

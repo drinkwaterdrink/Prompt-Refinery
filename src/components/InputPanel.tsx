@@ -7,6 +7,7 @@ import React from 'react';
 import { Sparkles, Trash2, Plus, ChevronDown, ChevronUp, ShieldAlert, RefreshCw, RotateCcw, BookOpen } from 'lucide-react';
 import { ConversationHistoryRow, ProjectContextPack } from '../types';
 import { ProjectPackSelector } from './ProjectPackSelector';
+import { EngineSelector } from './EngineSelector';
 
 interface InputPanelProps {
   rawPrompt: string;
@@ -42,7 +43,7 @@ interface InputPanelProps {
   onApplyContext: (id: string) => void;
 }
 
-export const InputPanel: React.FC<InputPanelProps> = ({
+export const InputPanel: React.FC<InputPanelProps> = React.memo(({
   rawPrompt,
   setRawPrompt,
   projectContext,
@@ -105,8 +106,8 @@ export const InputPanel: React.FC<InputPanelProps> = ({
       <form onSubmit={onSubmit} className="bg-[#0E0E0E] border border-[#1F1F1F] rounded-2xl md:p-5 p-4 flex flex-col gap-5 shadow-2xl">
         
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono font-bold tracking-widest text-[#D4AF37] uppercase flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
+          <span className="text-[10px] font-mono font-bold tracking-widest text-primary uppercase flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
             INPUT CONFIGURATION
           </span>
           <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
@@ -115,59 +116,19 @@ export const InputPanel: React.FC<InputPanelProps> = ({
         </div>
 
         {/* Mode Selector */}
-        <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-3 gap-2 bg-[#161616] p-1 rounded-xl border border-[#262626]">
-            <button
-              type="button"
-              id="mode-selector-mock"
-              onClick={() => setGenerationMode('mock')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'mock'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              🎭 Mock
-            </button>
-            <button
-              type="button"
-              id="mode-selector-gemini"
-              onClick={() => setGenerationMode('gemini')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'gemini'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              Gemini
-            </button>
-            <button
-              type="button"
-              id="mode-selector-custom"
-              onClick={() => setGenerationMode('custom_openai')}
-              className={`py-2 text-[10px] font-semibold rounded-lg font-mono tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
-                generationMode === 'custom_openai'
-                  ? 'bg-[#D4AF37] text-black font-bold border border-[#D4AF37]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#222222]/30 border border-transparent'
-              }`}
-            >
-              🔌 Custom API
-            </button>
-          </div>
-        </div>
+        <EngineSelector generationMode={generationMode} setGenerationMode={setGenerationMode} />
 
         {/* Recipe Selector */}
         <div className="flex flex-col gap-2">
           <label htmlFor="recipe-selector" className="text-[10px] font-bold uppercase tracking-wider text-slate-455 flex items-center gap-1 font-mono">
-            Prompt Recipe <span className="text-[#D4AF37]">*</span>
+            Prompt Recipe <span className="text-primary">*</span>
           </label>
           <div className="relative">
             <select
               id="recipe-selector"
               value={selectedRecipeId}
               onChange={(e) => setSelectedRecipeId(e.target.value as any)}
-              className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-xs font-semibold rounded-lg p-2.5 pr-8 text-[#D4AF37] cursor-pointer focus:outline-none transition appearance-none font-mono"
+              className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-xs font-semibold rounded-lg p-2.5 pr-8 text-primary cursor-pointer focus:outline-none transition appearance-none font-mono"
             >
               <option value="blueprint">📋 Blueprint (Default)</option>
               <option value="idea_refinement">💡 Idea Refinement</option>
@@ -177,7 +138,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
               <option value="black_swan">🦢 Black-Swan Ideation</option>
               <option value="design_audit">🎨 Design Audit</option>
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-[#D4AF37]">
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-primary">
               <ChevronDown className="h-3.5 w-3.5" />
             </div>
           </div>
@@ -195,7 +156,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
         {/* 1. Raw Input Prompt */}
         <div className="flex flex-col gap-2">
           <label htmlFor="raw-prompt" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            1. Raw Input Prompt <span className="text-[#D4AF37]">*</span>
+            1. Raw Input Prompt <span className="text-primary">*</span>
           </label>
           <textarea
             id="raw-prompt"
@@ -204,28 +165,28 @@ export const InputPanel: React.FC<InputPanelProps> = ({
             value={rawPrompt}
             onChange={(e) => setRawPrompt(e.target.value)}
             placeholder='e.g., "build me an app to track my workouts" or "add a dashboard"'
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150"
           />
           <div className="flex gap-1.5 flex-wrap mt-1">
             <span className="text-[10px] text-slate-500 uppercase font-mono py-0.5 tracking-wider">Placeholders:</span>
             <button
               type="button"
               onClick={() => setRawPrompt('build me an app to track my workouts')}
-              className="text-[10px] text-slate-400 hover:text-[#D4AF37] bg-[#161616] hover:bg-[#222222] px-2 py-0.5 rounded border border-[#262626] transition hover:border-[#D4AF37]/30"
+              className="text-[10px] text-slate-400 hover:text-primary bg-[#161616] hover:bg-[#222222] px-2 py-0.5 rounded border border-[#262626] transition hover:border-primary/30"
             >
               "workout tracker"
             </button>
             <button
               type="button"
               onClick={() => setRawPrompt('make it black now')}
-              className="text-[10px] text-slate-400 hover:text-[#D4AF37] bg-[#161616] hover:bg-[#222222] px-2 py-0.5 rounded border border-[#262626] transition hover:border-[#D4AF37]/30"
+              className="text-[10px] text-slate-400 hover:text-primary bg-[#161616] hover:bg-[#222222] px-2 py-0.5 rounded border border-[#262626] transition hover:border-primary/30"
             >
               "make it black"
             </button>
             <button
               type="button"
               onClick={() => setRawPrompt('add a dashboard')}
-              className="text-[10px] text-slate-400 hover:text-[#D4AF37] bg-[#161616] hover:bg-[#222222] px-2 py-0.5 rounded border border-[#262626] transition hover:border-[#D4AF37]/30"
+              className="text-[10px] text-slate-400 hover:text-primary bg-[#161616] hover:bg-[#222222] px-2 py-0.5 rounded border border-[#262626] transition hover:border-primary/30"
             >
               "add a dashboard"
             </button>
@@ -255,126 +216,95 @@ export const InputPanel: React.FC<InputPanelProps> = ({
             value={projectContext}
             onChange={(e) => setProjectContext(e.target.value)}
             placeholder='e.g. "Existing app uses React, Tailwind... Ensure mobile-first elegant dark mode."'
-            className="w-full bg-[#161616] border border-[#262626] focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/30 text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150"
+            className="w-full bg-[#161616] border border-[#262626] focus:border-primary focus:ring-1 focus:ring-[#00e5ff]/30 text-base md:text-sm font-sans rounded-lg p-3 text-slate-200 placeholder-slate-600 focus:outline-none transition-all resize-y duration-150"
           />
         </div>
 
-        {/* 3. Collapsible Simulated History */}
-        <div className="border border-[#262626] bg-[#161616]/40 rounded-xl overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
-            className="w-full py-3 px-4 bg-[#161616] hover:bg-[#222222] flex items-center justify-between text-left transition"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                3. Simulated Message History
-              </span>
-              <span className="bg-[#262626] text-[#D4AF37] text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold">
-                {historyRows.length} {historyRows.length === 1 ? 'msg' : 'msgs'}
-              </span>
-            </div>
-            {isHistoryCollapsed ? (
-              <ChevronDown className="h-4 w-4 text-[#D4AF37]" />
-            ) : (
-              <ChevronUp className="h-4 w-4 text-[#D4AF37]" />
-            )}
-          </button>
+        {/* 3. Conversation Thread History (Collapsible) */}
+        <div className="flex flex-col gap-2 border-t border-[#1F1F1F] pt-4">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+              className="text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer focus:outline-none"
+            >
+              {isHistoryCollapsed ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              3. Conversation History ({historyRows.length})
+            </button>
+            <button
+              type="button"
+              onClick={addHistoryRow}
+              className="text-[10px] text-primary hover:text-primary/80 font-mono font-bold flex items-center gap-1 cursor-pointer transition"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Row
+            </button>
+          </div>
 
           {!isHistoryCollapsed && (
-            <div className="p-3 bg-[#0A0A0A] border-t border-[#262626] flex flex-col gap-3">
+            <div className="flex flex-col gap-3 mt-2 max-h-[200px] overflow-y-auto pr-1.5 scroller-custom">
               {historyRows.length === 0 ? (
-                <div className="text-center py-4 bg-[#161616]/40 rounded-lg border border-dashed border-[#262626]">
-                  <p className="text-xs text-slate-500">No message history yet.</p>
-                  <button
-                    type="button"
-                    onClick={addHistoryRow}
-                    className="mt-2 text-[11px] text-[#D4AF37] hover:text-[#C09E32] inline-flex items-center gap-1 font-medium transition cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" /> Add starter message
-                  </button>
-                </div>
+                <p className="text-xs text-slate-500 italic py-2">No conversation history messages added yet.</p>
               ) : (
-                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-                  {historyRows.map((row) => (
-                    <div key={row.id} className="flex gap-2 items-start bg-[#161616] p-2 rounded-lg border border-[#262626]">
-                      <select
-                        value={row.role}
-                        onChange={(e) => updateHistoryRow(row.id, 'role', e.target.value as any)}
-                        className="bg-[#262626] border border-[#1F1F1F] text-[10px] text-[#D4AF37] focus:outline-none rounded px-1.5 py-1 font-mono uppercase tracking-wider font-semibold cursor-pointer"
-                      >
-                        <option value="user">User</option>
-                        <option value="assistant">Assistant</option>
-                      </select>
-                      <textarea
-                        rows={1}
-                        value={row.content}
-                        onChange={(e) => updateHistoryRow(row.id, 'content', e.target.value)}
-                        placeholder="Type raw response or request..."
-                        className="flex-1 bg-transparent text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-0 border-0 resize-none py-0.5 text-ellipsis"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeHistoryRow(row.id)}
-                        className="text-slate-600 hover:text-rose-400 transition p-1 cursor-pointer"
-                        title="Remove message row"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addHistoryRow}
-                    className="text-[11px] text-[#D4AF37] hover:text-[#C09E32] self-start flex items-center gap-1 font-mono tracking-wider uppercase mt-1 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Append Message Row
-                  </button>
-                </div>
+                historyRows.map((row) => (
+                  <div key={row.id} className="flex gap-2 items-start bg-[#161616]/40 border border-[#1F1F1F] p-2 rounded-lg">
+                    <select
+                      value={row.role}
+                      onChange={(e) => updateHistoryRow(row.id, 'role', e.target.value as any)}
+                      className="bg-[#121212] border border-[#262626] rounded-md px-1.5 py-1 text-[10px] font-bold text-slate-300 focus:outline-none"
+                    >
+                      <option value="user">User</option>
+                      <option value="assistant">Agent</option>
+                    </select>
+                    <textarea
+                      value={row.content}
+                      onChange={(e) => updateHistoryRow(row.id, 'content', e.target.value)}
+                      placeholder="Type a message or instruction..."
+                      rows={1}
+                      className="flex-1 bg-transparent text-xs text-slate-200 outline-none resize-none pt-0.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeHistoryRow(row.id)}
+                      className="text-slate-500 hover:text-red-400 transition cursor-pointer p-0.5 mt-0.5"
+                      title="Delete row"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           )}
         </div>
 
-        {/* Error Injection Switch - Gated under Debug Mode */}
-        {debugMode && (
-          <div className="bg-[#1F1414] border border-[#3A1E1E]/50 rounded-xl p-3 flex items-center justify-between animate-fade-in">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="h-4.5 w-4.5 text-rose-400" />
-              <div>
-                <h4 className="text-[11px] font-bold text-rose-300 uppercase tracking-wider font-mono">Test Schema Error Handler</h4>
-                <p className="text-[10px] text-slate-400 leading-snug">Forces standard invalid mock output to test schema recovery UI</p>
-              </div>
+        {/* Validation error advice HUD */}
+        {forceValidationError && (
+          <div className="bg-rose-950/20 border border-rose-900/35 rounded-xl p-3 flex items-start gap-2 text-rose-350">
+            <ShieldAlert className="h-4.5 w-4.5 text-rose-455 shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Diagnostics override active</span>
+              <p className="text-[10px] leading-normal text-rose-400">
+                Will deliberately inject client errors to evaluate schema verification handlers.
+              </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={forceValidationError}
-                onChange={(e) => setForceValidationError(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-[#161616] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-500 after:border-[#262626] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-700"></div>
-            </label>
           </div>
         )}
 
-        {/* Bottom Actions Frame */}
-        <div className="flex gap-3">
+        {/* Generate Actions footer layout */}
+        <div className="border-t border-[#1F1F1F] pt-4.5 flex gap-3 items-center">
           <button
             type="button"
             onClick={onClear}
-            className="flex-[1] bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-300 text-[10px] font-mono tracking-widest uppercase font-bold rounded-lg py-3 justify-center transition flex items-center gap-1.5 cursor-pointer"
+            className="text-xs bg-transparent border border-[#262626] text-slate-400 font-bold px-4 py-2.5 rounded-xl transition hover:text-white active:scale-98 cursor-pointer flex items-center gap-1.5 hover:bg-[#161616]"
+            title="Reset All Inputs"
           >
-            Clear
+            <RotateCcw className="h-4 w-4" /> Clear
           </button>
+          
           <button
             type="submit"
             disabled={isGenerating || !rawPrompt.trim()}
-            className={`flex-[3] text-[10px] font-mono tracking-widest uppercase font-bold rounded-lg py-3 transition relative overflow-hidden flex items-center justify-center gap-1.5 cursor-pointer ${
-              !rawPrompt.trim()
-                ? 'bg-[#1E1E1E]/50 text-slate-600 border border-[#262626] cursor-not-allowed'
-                : 'bg-[#D4AF37] hover:bg-[#C09E32] text-black shadow-[0_0_20px_rgba(212,175,55,0.15)] font-semibold'
-            }`}
+            className="flex-1 bg-primary disabled:bg-slate-800 text-black disabled:text-slate-500 font-bold text-xs px-5 py-2.5 rounded-xl transition hover:opacity-90 active:scale-98 shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
           >
             {isGenerating ? (
               <>
@@ -395,7 +325,7 @@ export const InputPanel: React.FC<InputPanelProps> = ({
       {/* Quick info/workflow footer card */}
       <div className="bg-[#0E0E0E]/50 border border-[#1F1F1F] rounded-xl p-4 text-xs text-slate-400 flex flex-col gap-2">
         <span className="font-bold text-slate-300 flex items-center gap-1 font-mono uppercase text-[10px] tracking-wider">
-          <BookOpen className="h-3.5 w-3.5 text-[#D4AF37]" /> Blueprint Methodology
+          <BookOpen className="h-3.5 w-3.5 text-primary" /> Blueprint Methodology
         </span>
         <p className="leading-relaxed text-[11px] text-slate-400">
           Coding agents write significantly cleaner architecture when provided structured declarations. Prompt Refinery compiles raw ideas into robust technical descriptions, handling assumptions, UX components, and security schemas explicitly.
@@ -404,5 +334,5 @@ export const InputPanel: React.FC<InputPanelProps> = ({
 
     </section>
   );
-};
+});
 export type InputPanelComponent = typeof InputPanel;

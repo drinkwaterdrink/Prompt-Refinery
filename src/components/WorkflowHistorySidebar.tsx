@@ -32,9 +32,9 @@ export const WorkflowHistorySidebar: React.FC<WorkflowHistorySidebarProps> = ({
       <div className="absolute inset-0 cursor-pointer" onClick={onClose}></div>
       
       {/* Drawer body */}
-      <div className="relative w-full max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in">
+      <div className="relative w-full sm:max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in">
         <div className="p-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#161616]/40">
-          <div className="flex items-center gap-2 text-[#D4AF37]">
+          <div className="flex items-center gap-2 text-primary">
             <BookOpen className="h-4.5 w-4.5" />
             <h3 className="font-serif font-bold text-sm">Workflow Runs History</h3>
           </div>
@@ -74,14 +74,14 @@ export const WorkflowHistorySidebar: React.FC<WorkflowHistorySidebarProps> = ({
               {workflowHistory.map((item) => (
                 <div 
                   key={item.id}
-                  className="group relative bg-[#161616]/60 hover:bg-[#1C1C1C] border border-[#262626] hover:border-[#D4AF37]/40 rounded-xl p-3.5 transition flex flex-col gap-2 cursor-pointer"
+                  className="group relative bg-[#161616]/60 hover:bg-[#1C1C1C] border border-[#262626] hover:border-primary/40 rounded-xl p-3.5 transition flex flex-col gap-2 cursor-pointer"
                   onClick={() => {
                     onLoadItem(item);
                     onClose();
                   }}
                 >
                   <div className="flex items-start justify-between gap-1.5">
-                    <h4 className="font-serif font-semibold text-xs text-[#D4AF37] group-hover:underline text-ellipsis overflow-hidden whitespace-nowrap max-w-[220px]">
+                    <h4 className="font-serif font-semibold text-xs text-primary group-hover:underline text-ellipsis overflow-hidden whitespace-nowrap max-w-[220px]">
                       {item.title}
                     </h4>
                     <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold border shrink-0 ${
