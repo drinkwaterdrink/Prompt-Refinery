@@ -2,10 +2,12 @@
 
 This document provides a comprehensive specifications guide for Prompt Refinery's Node-Express server endpoints.
 
+In production, all existing `/api/*` workflow endpoints require the signed session cookie. `POST /api/auth/login` accepts `{ "password": "..." }`, `POST /api/auth/logout` revokes the session, and `GET /api/auth/status` returns `{ "authenticated": boolean }`. These three auth routes are reachable before login. Login is limited to five attempts per 15 minutes per IP.
+
 ---
 
 ## 1. `/api/health` (GET)
-Performs basic server diagnostic health checks and identifies the server state.
+Performs an authenticated basic health check. Public `GET /healthz` returns the same minimal status.
 
 * **Request**: None.
 * **Response (JSON)**:
@@ -15,7 +17,7 @@ Performs basic server diagnostic health checks and identifies the server state.
     "mode": "gemini"
   }
   ```
-  *(Mode can be `"gemini"` or `"mock-only"` depending on the presence of `GEMINI_API_KEY` env variable).*
+  The response contains only `{ "status": "ok" }`; provider configuration is not disclosed.
 
 ---
 

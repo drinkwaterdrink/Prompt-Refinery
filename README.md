@@ -4,7 +4,7 @@
 
 # Prompt Refinery
 
-**Version:** 0.11  
+**Version:** 0.10
 Prompt Refinery is a premium, high-fidelity developer workstation designed to run, compile, and refine raw software ideas into precision-crafted, structured prompt blueprint stacks. Engineered specifically for pairing with agentic coders (such as Antigravity, Cursor, or AI Studio), Prompt Refinery prevents tech debt, guarantees structural design system integrity, and maximizes agent speed and accuracy.
 
 ---
@@ -17,7 +17,7 @@ Prompt Refinery is a premium, high-fidelity developer workstation designed to ru
 * **🎨 Design System Audit**: Evaluates layout maps, UI assets descriptions, and active CSS parameters against 17 systematic spacing, accessibility, and contrast rules (WCAG AA).
 * **💡 Creative Spark Catalyst**: Generates novel, defensive, and highly defensible MVP concepts tailored to stacks, difficulty, or custom novelty scales.
 * **📦 Project Context Packs**: Saves durable, reusable app profiles (tech stack, current status, known issues, roadmap, source files, custom rules) and injects them instantly into model prompts as high-priority system instructions.
-* **🔌 Connection Profiles Manager**: A client-side credential registry inside the Settings panel to create, save, select, and delete connection profiles (URL, keys, custom headers, JSON Mode) persisted in browser local storage for secure session continuity.
+* **🔌 Connection Profiles Manager**: Saves provider names, URLs, models, and JSON mode locally. API keys and custom headers remain session-only.
 * **🎯 Codex /goal Contract Builder**: An interactive universal exporter side-drawer that parses active workspace metadata (Blueprints, Roadmaps, or Design Audits) and generates verified 5-part machine-readable goal prompt contracts optimized for autonomous agentic execution.
 
 ---
@@ -35,7 +35,7 @@ Prompt Refinery is a premium, high-fidelity developer workstation designed to ru
 ## 🚀 Local Quickstart
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/) (Version 18+ recommended)
+* [Node.js](https://nodejs.org/) (Node 24 LTS)
 * A Google Gemini API Key (or a compatible Custom LLM proxy endpoint)
 
 ### Installation
@@ -72,7 +72,7 @@ Prompt Refinery is a premium, high-fidelity developer workstation designed to ru
   *Executes the bundled, production-ready server process.*
 * **TypeScript Integrity Type check**:
   ```bash
-  npm run lint
+  npm run typecheck
   ```
   *Runs non-emitting strict static compilation checks over all modules.*
 
@@ -82,11 +82,11 @@ Prompt Refinery is a premium, high-fidelity developer workstation designed to ru
 
 To learn more about configuring, extending, or deploying Prompt Refinery, explore our dedicated guides:
 
-1. [🔌 Backend API Reference](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/API_ENDPOINTS.md) — Detailed Express server routes, request payloads, response schemas, and telemetry formats.
-2. [📋 The Prompt Recipe Library](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/PROMPT_RECIPES.md) — Explains recipe schemas, registries, custom recipe additions, and Quality Profiles integrations.
-3. [📱 Mobile Local Network Access](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/PHONE_ACCESS.md) — How to access the workspace from your smartphone, find LAN IPs, and configure Windows Defender Firewall port rules.
-4. [☁️ Cloud Deployment Readiness](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/DEPLOYMENT.md) — Hosting guidelines for Railway, Render, Fly.io, or VPS, and limitations of static-only decoders.
-5. [🔒 Security & Key Hygiene Policy](file:///c:/Users/trent/antigravity/Prompt-Refinery/docs/SECURITY.md) — Outlines BYOK storage transient policies, server secrets management, and automated logs redactions.
+1. [🔌 Backend API Reference](docs/API_ENDPOINTS.md) — Express routes and response shapes.
+2. [📋 The Prompt Recipe Library](docs/PROMPT_RECIPES.md) — Recipe schemas and profiles.
+3. [📱 Mobile Local Network Access](docs/PHONE_ACCESS.md) — Local network access guidance.
+4. [☁️ Cloud Deployment Readiness](docs/DEPLOYMENT.md) — Deployment guidance.
+5. [🔒 Security & Key Hygiene Policy](docs/SECURITY.md) — Authentication and credential handling.
 
 ---
 

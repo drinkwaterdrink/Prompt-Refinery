@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api/client';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -184,7 +185,7 @@ export function useBlueprintGeneration({
           setGenerationStep((prev) => (prev < 3 ? prev + 1 : prev));
         }, 500);
 
-        const response = await fetch('/api/refine', {
+        const response = await apiFetch('/api/refine', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -324,7 +325,7 @@ export function useBlueprintGeneration({
         }
       };
 
-      const response = await fetch('/api/refine-loop', {
+      const response = await apiFetch('/api/refine-loop', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

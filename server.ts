@@ -8,6 +8,10 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
+import { createAuth } from "./src/server/auth";
+import { validateCustomProviderUrl, validateCustomHeaders, assertPublicResolution, fetchCustomProvider } from "./src/server/providerPolicy";
 import { generateBlueprintForPrompt } from "./src/mockData";
 import { validateBlueprint } from "./src/types";
 import { ENHANCER_SYSTEM_PROMPT, BLUEPRINT_OUTPUT_CONTRACT } from "./src/lib/prompt/enhancerSystemPrompt";
@@ -17,6 +21,14 @@ import { generateLocalSparks } from "./src/lib/sparksMockGenerator";
 import { getProfileById } from "./src/lib/promptProfiles";
 
 dotenv.config();
+
+function safeLog(label: string, error: unknown) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error(label);
+  } else {
+    console.error(label, error);
+  }
+}
 
 function repairJson(jsonStr: string): string {
   let clean = jsonStr.trim();
@@ -520,7 +532,7 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
       fullUrl = fullUrl + "/chat/completions";
     }
   } else {
-    const baseUrl = (config.baseUrl || "").trim();
+    const baseUrl = (config.baseUrl || process.env.CUSTOM_OPENAI_BASE_URL || "").trim();
     if (!baseUrl) {
       throw new Error("Custom OpenAI API URL or Base URL is required.");
     }
@@ -531,18 +543,13 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
     fullUrl = baseUrl.replace(/\/+$/, "") + endpoint;
   }
   
-  const apiKey = (config.apiKey || "").trim();
-  const model = (config.model || "").trim();
+  const apiKey = (config.apiKey || process.env.CUSTOM_OPENAI_API_KEY || "").trim();
+  const model = (config.model || process.env.CUSTOM_OPENAI_MODEL || "").trim();
   const jsonMode = !!config.jsonMode;
   
-  let customHeaders: Record<string, string> = {};
-  if (config.customHeadersJson && config.customHeadersJson.trim()) {
-    try {
-      customHeaders = JSON.parse(config.customHeadersJson);
-    } catch (e: any) {
-      throw new Error(`Failed to parse custom headers JSON: ${e.message}`);
-    }
-  }
+  const providerUrl = validateCustomProviderUrl(fullUrl);
+  if (process.env.NODE_ENV === 'production') await assertPublicResolution(providerUrl);
+  const customHeaders = validateCustomHeaders(config.customHeadersJson);
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -573,7 +580,7 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
   }
   
   try {
-    const response = await fetch(fullUrl, {
+    const response = await fetchCustomProvider(providerUrl, {
       method: "POST",
       headers,
       body: JSON.stringify(body)
@@ -581,7 +588,9 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
-      throw new Error(`HTTP error status ${response.status}: ${errorText || response.statusText}`);
+      throw new Error(process.env.NODE_ENV === 'production'
+        ? `Provider returned HTTP ${response.status}.`
+        : `HTTP error status ${response.status}: ${errorText || response.statusText}`);
     }
     
     const data: any = await response.json();
@@ -616,15 +625,59 @@ async function callCustomOpenAI(params: CustomOpenAIRequestParams): Promise<stri
       const apiKeyRegex = new RegExp(escapeRegExp(apiKey), "g");
       msg = msg.replace(apiKeyRegex, "[REDACTED]");
     }
-    throw new Error(msg);
+    throw new Error(process.env.NODE_ENV === 'production' ? 'Custom provider request failed or timed out.' : msg);
   }
 }
 
 async function startServer() {
   const app = express();
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  const PORT = 3000;
+  const production = process.env.NODE_ENV === 'production';
+  const auth = createAuth(); // Fail closed before opening a listening socket.
+  if (production) app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ limit: '2mb', extended: true }));
+  app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
+  const PORT = Number(process.env.PORT) || 3000;
+
+  // Prevent malicious origins from using an existing same-site login for paid POSTs.
+  app.use('/api', (req, res, next) => {
+    if (production && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      const origin = req.get('origin');
+      if (origin && origin !== `${req.protocol}://${req.get('host')}`) return res.status(403).json({ ok: false, error: 'Forbidden origin.' });
+    }
+    next();
+  });
+  app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
+  app.get('/api/auth/status', auth.status);
+  app.post('/api/auth/login', auth.loginLimit, auth.login);
+  app.post('/api/auth/logout', auth.logout);
+  app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: 'draft-7', legacyHeaders: false }));
+  app.use('/api', auth.requireAuth);
+  const generationLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: 'draft-7', legacyHeaders: false });
+  app.use('/api', (req, res, next) => {
+    if (req.method === 'POST' && ['/refine', '/refine-loop', '/sparks', '/project-ideas', '/design-audit', '/test-connection'].includes(req.path)) {
+      return generationLimit(req, res, next);
+    }
+    next();
+  });
+  if (production) app.use('/api', (_req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = ((body: any) => {
+      if (body && (body.ok === false || res.statusCode >= 400)) {
+        const safe = { ...body, rawOutput: undefined,
+          error: res.statusCode >= 500 || res.statusCode === 200
+            ? 'The request could not be completed. Check server settings and logs for details.'
+            : recursiveSanitize(body.error),
+          type: body.type || (res.statusCode >= 500 ? 'PROVIDER_FAILURE' : undefined) };
+        return originalJson(safe);
+      }
+      return originalJson(body);
+    }) as typeof res.json;
+    next();
+  });
+
 
   // Initialize dynamic Gemini Client with custom or fallback API credentials
   function getGeminiClient(settings: any): { ai: GoogleGenAI | null; error: string | null } {
@@ -650,7 +703,7 @@ async function startServer() {
       });
       return { ai: gAI, error: null };
     } catch (err: any) {
-      return { ai: null, error: `Invalid API key registration logic: ${err.message}` };
+      return { ai: null, error: 'Could not initialize Gemini provider.' };
     }
   }
 
@@ -686,13 +739,13 @@ async function startServer() {
     return {
       status: 500,
       type: "API_PROVIDER_FAILURE",
-      message: `Gemini API connection error: ${msg}. If this happens frequently, try toggling 'Strict Schema JSON' off in the Settings panel.`
+        message: production ? 'Gemini provider request failed.' : `Gemini API connection error: ${msg}. If this happens frequently, try toggling 'Strict Schema JSON' off in the Settings panel.`
     };
   }
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", mode: process.env.GEMINI_API_KEY ? "gemini" : "mock-only" });
+    res.json({ status: "ok" });
   });
 
   // Test connection endpoint
@@ -728,7 +781,7 @@ async function startServer() {
         return res.json({ ok: true, latencyMs, text: responseText.trim() });
       }
     } catch (err: any) {
-      console.error("Test connection failed:", err);
+      safeLog("Test connection failed:", err);
       let errMsg = err.message || String(err);
       if (config.apiKey && errMsg.includes(config.apiKey)) {
         errMsg = errMsg.split(config.apiKey).join("[REDACTED]");
@@ -808,7 +861,7 @@ You must reason privately. Output valid JSON only, matching the requested schema
 
         throw new Error("JSON structure did not contain expected sparks list.");
       } catch (customError: any) {
-        console.error("Custom OpenAI Sparks Generation failed:", customError);
+        safeLog("Custom OpenAI Sparks Generation failed:", customError);
         const fallbackIdeas = generateLocalSparks(sparkCount, sparkNovelty);
         return res.json({
           ok: false,
@@ -919,7 +972,7 @@ You must reason privately. Output valid JSON only, matching the requested schema
       throw new Error("JSON structure did not contain expected sparks list.");
 
     } catch (geminiError: any) {
-      console.error("Gemini Sparks Generation failed:", geminiError);
+      safeLog("Gemini Sparks Generation failed:", geminiError);
       const classified = handleProviderError(geminiError);
       const fallbackIdeas = generateLocalSparks(sparkCount, sparkNovelty);
       return res.json({
@@ -1037,7 +1090,7 @@ You must reason privately. Output valid JSON only, matching the requested schema
               }
               extractedFilesList = gitExtraction.files;
             } catch (err) {
-              console.error("Lightweight GitHub context extraction failed silently:", err);
+              safeLog("Lightweight GitHub context extraction failed silently:", err);
             }
           }
 
@@ -1092,7 +1145,7 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
           parsedJson.ok = true;
           return res.json(parsedJson);
         } catch (customError: any) {
-          console.error("Custom OpenAI Code Review failed:", customError);
+          safeLog("Custom OpenAI Code Review failed:", customError);
           return res.status(500).json({
             ok: false,
             error: recursiveSanitize(customError.message)
@@ -1121,7 +1174,7 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
           }
           extractedFilesList = gitExtraction.files;
         } catch (err) {
-          console.error("Lightweight GitHub context extraction failed silently:", err);
+          safeLog("Lightweight GitHub context extraction failed silently:", err);
         }
       }
 
@@ -1215,7 +1268,7 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
         return res.json(parsed);
 
       } catch (geminiError: any) {
-        console.error("Gemini Code Review failed:", geminiError);
+        safeLog("Gemini Code Review failed:", geminiError);
         const classified = handleProviderError(geminiError);
         return res.status(classified.status).json({
           ok: false,
@@ -1224,7 +1277,7 @@ Ensure the strengths, risks, suggestions, phase prompts, and next phase plans ge
       }
 
     } catch (routeErr: any) {
-      console.error("Endpoint execution error in /api/project-ideas:", routeErr);
+      safeLog("Endpoint execution error in /api/project-ideas:", routeErr);
       return res.status(500).json({ ok: false, error: "An unexpected system error occurred on the development server." });
     }
   });
@@ -1361,7 +1414,7 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           parsedJson.ok = true;
           return res.json(parsedJson);
         } catch (customError: any) {
-          console.error("Custom OpenAI Design Audit failed:", customError);
+          safeLog("Custom OpenAI Design Audit failed:", customError);
           return res.status(500).json({
             ok: false,
             error: recursiveSanitize(customError.message)
@@ -1476,7 +1529,7 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
         return res.json(parsed);
 
       } catch (geminiError: any) {
-        console.error("Gemini Design Audit failed:", geminiError);
+        safeLog("Gemini Design Audit failed:", geminiError);
         const classified = handleProviderError(geminiError);
         return res.status(classified.status).json({
           ok: false,
@@ -1485,7 +1538,7 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
       }
 
     } catch (routeErr: any) {
-      console.error("Endpoint execution error in /api/design-audit:", routeErr);
+      safeLog("Endpoint execution error in /api/design-audit:", routeErr);
       return res.status(500).json({ ok: false, error: "An unexpected system error occurred on the development server." });
     }
   });
@@ -1583,8 +1636,8 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           });
 
         } catch (customError: any) {
-          console.error("Custom OpenAI invocation failed:", customError);
-          const isDebug = settings?.debugMode === true;
+          safeLog("Custom OpenAI invocation failed:", customError);
+          const isDebug = !production && settings?.debugMode === true;
           return res.status(500).json({
             ok: false,
             error: recursiveSanitize(customError.message),
@@ -1689,8 +1742,8 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
         });
 
       } catch (geminiError: any) {
-        console.error("Gemini invocation failed:", geminiError);
-        const isDebug = settings?.debugMode === true;
+        safeLog("Gemini invocation failed:", geminiError);
+        const isDebug = !production && settings?.debugMode === true;
         const classified = handleProviderError(geminiError);
         return res.status(classified.status).json({
           ok: false,
@@ -1701,8 +1754,8 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
       }
 
     } catch (routeError: any) {
-      console.error("Endpoint execution error in POST /api/refine:", routeError);
-      const isDebug = req.body?.settings?.debugMode === true;
+      safeLog("Endpoint execution error in POST /api/refine:", routeError);
+      const isDebug = !production && req.body?.settings?.debugMode === true;
       return res.status(500).json({
         ok: false,
         error: "An unexpected system error occurred on the development server.",
@@ -1875,8 +1928,8 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
           });
 
         } catch (customError: any) {
-          console.error("Custom OpenAI refinement failed:", customError);
-          const isDebug = settings?.debugMode === true;
+          safeLog("Custom OpenAI refinement failed:", customError);
+          const isDebug = !production && settings?.debugMode === true;
           return res.status(500).json({
             ok: false,
             error: recursiveSanitize(customError.message),
@@ -2007,8 +2060,8 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
         });
 
       } catch (geminiError: any) {
-        console.error("Gemini refinement failed:", geminiError);
-        const isDebug = settings?.debugMode === true;
+        safeLog("Gemini refinement failed:", geminiError);
+        const isDebug = !production && settings?.debugMode === true;
         const classified = handleProviderError(geminiError);
         return res.status(classified.status).json({
           ok: false,
@@ -2019,14 +2072,21 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
       }
 
     } catch (routeError: any) {
-      console.error("Endpoint execution error in POST /api/refine-loop:", routeError);
-      const isDebug = req.body?.settings?.debugMode === true;
+      safeLog("Endpoint execution error in POST /api/refine-loop:", routeError);
+      const isDebug = !production && req.body?.settings?.debugMode === true;
       return res.status(500).json({
         ok: false,
         error: "An unexpected system error occurred on the development server.",
         rawOutput: isDebug ? recursiveSanitize(routeError.stack || String(routeError)) : undefined
       });
     }
+  });
+
+  app.use('/api', (_req, res) => res.status(404).json({ ok: false, error: 'API route not found.' }));
+  app.use('/api', (error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    safeLog('API request failed:', error);
+    const status = error?.status === 413 ? 413 : 400;
+    res.status(status).json({ ok: false, error: status === 413 ? 'Request body exceeds the 2 MiB limit.' : 'Invalid request.' });
   });
 
   // Serve static assets or mount Vite dev server middleware
@@ -2038,8 +2098,13 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { setHeaders: (res, filePath) => {
+      const name = path.basename(filePath);
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      else if (name === 'index.html' || name === 'manifest.webmanifest' || name === 'sw.js' || name.startsWith('service-worker')) res.setHeader('Cache-Control', 'no-cache');
+    } }));
     app.get('*', (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

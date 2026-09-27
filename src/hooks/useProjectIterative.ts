@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api/client';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -134,7 +135,7 @@ export function useProjectIterative({
     }
 
     try {
-      const response = await fetch('/api/project-ideas', {
+      const response = await apiFetch('/api/project-ideas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

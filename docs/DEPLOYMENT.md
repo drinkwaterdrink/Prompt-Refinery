@@ -7,13 +7,13 @@ This guide outlines options, constraints, and recommendations for deploying Prom
 ## The Server vs. Static Boundary
 
 > [!IMPORTANT]
-> **Prompt Refinery is NOT a static-only web application.**
-> Because of API authentication protocols, Gemini SDK routing, CORS safety constraints, and session isolation, Prompt Refinery consists of a **React frontend** and an **Express.js backend server** that communicate continuously.
+> **Prompt Refinery requires one Node/Express deployment.**
+> Express serves the Vite frontend, authentication routes, health endpoint, and `/api/*` on the same origin. Put the deployment behind HTTPS.
 
 ### GitHub Pages Limitation
 * **GitHub Pages, Vercel (static), and Netlify (static)** cannot host the backend server routes.
 * If you host only the `dist` static folder on GitHub Pages, the application will load the UI shell but **all live LLM calls (Gemini and Custom OpenAI) will fail** due to missing `/api/` endpoints.
-* **Exceptions**: Static-only hosting *can* support the offline **🎭 Mock Mode** 100% locally on the client. If you only intend to run simulations and saved client histories offline, a static deploy is sufficient.
+* Static-only hosting is unsupported, including for the hosted login flow.
 
 ---
 
@@ -51,7 +51,7 @@ To enjoy the full feature set (Gemini, Custom API endpoints, diagnostics, sparks
   3. Configure environment secrets via `fly secrets set GEMINI_API_KEY="..."`.
 
 ### 4. VPS / Self-Hosted (DigitalOcean, AWS EC2, Linode)
-* Set up a Linux server with Node.js 18+ and a reverse proxy like **Nginx**.
+* Set up a Linux server with Node.js 24 LTS and an HTTPS reverse proxy like **Nginx**.
 * Keep the server running continuously using a process manager like **PM2**:
   ```bash
   npm install
@@ -82,3 +82,5 @@ This command runs the compiled production server process:
 node dist/server.cjs
 ```
 This is the command that must be triggered by your hosting provider in production environments.
+
+Set `NODE_ENV=production`, `APP_ACCESS_PASSWORD`, and a random `COOKIE_SECRET` of at least 32 characters in the host secret manager. `GEMINI_API_KEY` and `CUSTOM_OPENAI_API_KEY` are optional server-side AI keys. The default custom provider hostname allowlist is OpenRouter and NanoGPT; use `ALLOWED_CUSTOM_API_HOSTS` for additional exact hostnames. `PORT` is optional and defaults to 3000. The application refuses to start without production authentication secrets. See [Security](SECURITY.md) for limits, cookies, and credential handling.

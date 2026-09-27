@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api/client';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -150,7 +151,7 @@ export function useDesignAudit({
     }
 
     try {
-      const response = await fetch('/api/design-audit', {
+      const response = await apiFetch('/api/design-audit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

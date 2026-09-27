@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api/client';
 import React from 'react';
 import { Settings, X, Trash2, Eye, EyeOff, ShieldAlert, Plus, Save } from 'lucide-react';
 import { ConnectionProfile } from '../lib/providers/types';
@@ -270,7 +271,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }));
 
     if (!silent) {
-      showToast(`Profile "${profileName || 'Default'}" saved to browser local registry.`);
+      showToast(`Profile "${profileName || 'Default'}" saved. Credentials remain in this session only.`);
     }
   };
 
@@ -330,7 +331,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         };
       }
 
-      const response = await fetch('/api/test-connection', {
+      const response = await apiFetch('/api/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

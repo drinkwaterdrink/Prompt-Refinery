@@ -1,3 +1,4 @@
+import { apiFetch } from '../lib/api/client';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -268,7 +269,7 @@ export function usePipelineWorkflow({
     }
 
     try {
-      const response = await fetch('/api/refine', {
+      const response = await apiFetch('/api/refine', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

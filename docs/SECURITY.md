@@ -1,61 +1,30 @@
-# Security & Credentials Policy
+# Security and credentials
 
-This document outlines the security architecture, credential boundaries, and privacy safeguards engineered into Prompt Refinery.
+Prompt Refinery runs as one Express deployment. The Vite frontend and `/api/*` share an origin. Serve production traffic through HTTPS; Express trusts one reverse proxy hop for client IP handling. `GET /healthz` is public and returns only `{ "status": "ok" }`.
 
----
+## Required production settings
 
-## 1. Secrets & Environment Protection
+- `NODE_ENV=production`
+- `APP_ACCESS_PASSWORD`: the single-user access password. Store it in the host's secret manager.
+- `COOKIE_SECRET`: a unique random signing secret of at least 32 characters. Changing it invalidates sessions.
+- `PORT`: optional listening port, default 3000. The server binds `0.0.0.0`.
 
-> [!WARNING]
-> **Never commit your `.env` file to version control (GitHub, GitLab, etc.).**
-> The `.env` file contains sensitive API secrets that give access to paid Gemini services. The project's `.gitignore` file is pre-configured to ignore `.env`, but you must remain vigilant.
+The process refuses to start in production when the password or cookie secret is missing. With `NODE_ENV` other than `production` and no access password, local development bypasses authentication. Do not expose that development configuration to the internet.
 
-### Best Practices:
-* Keep `.env` strictly local on your development PC.
-* In production clouds, use the provider's native **Environment Secrets Manager** (e.g. Render Secrets, Railway Variables, or Fly Secrets) to inject the variables into memory dynamically.
+`GEMINI_API_KEY` and `CUSTOM_OPENAI_API_KEY` are optional server-side provider secrets. Keep `.env` out of Git. `CUSTOM_OPENAI_MODEL` is an optional model default. Browser BYOK keys are sent only to authenticated same-origin API routes and remain in volatile state or session storage. Browser extensions and a compromised device can still read BYOK secrets; use server-side keys when possible.
 
----
+## Sessions and request limits
 
-## 2. API Key Management Architecture
+Successful login sets a signed, HttpOnly, SameSite=Strict cookie with a 30-day maximum age. In production it is Secure. Sessions are held in server memory, so a restart requires login again. Logout revokes the in-memory session and clears the cookie. Password comparison uses a fixed-length keyed digest and timing-safe comparison. Five login requests per 15 minutes per client IP are allowed; API routes allow 300 requests per 15 minutes, with a separate 60 requests per 15 minutes limit for generation and connection tests. Rates are per process and client IP, so use one Node instance for this personal deployment.
 
-Prompt Refinery supports three mechanisms for credential management, each with specific security profiles:
+JSON and URL-encoded request bodies are limited to 2 MiB. This allows long prompts, conversation history, and project packs while avoiding the previous 50 MiB exposure. Production responses omit error stack traces and failed provider raw output. Server logs use error categories without provider messages or credentials. Helmet sets standard security headers without an untested CSP.
 
-### A. Server-Side Keys (Recommended)
-Configured via `GEMINI_API_KEY` in the `.env` file on the server.
-* **Security Profile**: **High**.
-* **Why**: The API key stays securely in the server process memory. It is never exposed, sent, or stored in the browser client shell.
+## Custom OpenAI-compatible providers
 
-### B. Client-Side Browser BYOK (Bring Your Own Key)
-Configured by the user inside the settings panel for native Gemini calls.
-* **Security Profile**: **Convenience-Only**.
-* **Warning**: While convenient for personal/multi-device setups, client-side browser keys are vulnerable if your device is compromised or infected with malicious browser extensions.
-* **Storage**: BYOK keys are held transiently in `sessionStorage`. They are wiped instantly when the browser tab is closed.
+Production URLs must use HTTPS, contain no embedded credentials, and have an exact hostname in `ALLOWED_CUSTOM_API_HOSTS`. When this variable is omitted, the defaults are `api.openrouter.ai,nano-gpt.com`. Set a comma-separated list to approve other exact hostnames. IP literals, localhost, internal names, and DNS results in private or metadata networks are rejected. Provider redirects are disabled and outbound calls time out after 90 seconds. Custom headers are restricted to provider-oriented fields; transport, proxy, Cookie, and Authorization headers cannot be set through the custom-header editor. An `X-Api-Key` header can be used for provider-specific authentication but stays session-only.
 
-### C. Connection Profiles (LocalStorage)
-Configured inside the settings panel for Custom OpenAI/compatible endpoints.
-* **Security Profile**: **Medium-Convenience**.
-* **Behavior**: Saved connection profile credentials (endpoints, custom headers, and API keys) are persisted in `localStorage` so you do not have to retype them.
-* **Constraint**: This is stored in plain text inside your browser's private directory. Ensure you run Prompt Refinery on trusted devices.
+Development may use HTTP localhost providers such as Ollama. Custom provider hosts are operator-trusted: only approve domains you control or trust. In production, the outbound transport validates DNS again when it opens the socket and uses that validated address. An egress firewall is still recommended for defense in depth.
 
----
+## Browser data
 
-## 3. Strict Boundary & Sanitization Rules
-
-To prevent credential leaks, the codebase enforces absolute boundaries separating secrets from workspace exports and history logs:
-
-### Redaction on the Server
-All API completion exceptions are intercepted on the backend before being sent to the client. The server parses stack traces and recursively replaces any detected instances of active API keys with a redacted placeholder:
-```text
-[REDACTED]
-```
-
-### Omission in Exporters
-When you export blueprints, timeline pipelines, or Vibe packets to JSON/Markdown, **all API keys, credentials, and authentication headers are strictly omitted** from the payloads. 
-
----
-
-## 4. Debug Mode Warnings
-
-> [!CAUTION]
-> **Keep Debug Mode turned OFF in production environments.**
-> Enabling Debug Mode inside the Settings panel outputs verbose technical metrics, internal server stack traces, raw JSON payloads, and network error statuses to the user interface. While invaluable for local developer diagnostics, exposing these traces publicly is a significant security risk.
+Connection profiles persist only id, name, provider, URL, model, and JSON mode. Startup rewrites legacy profiles to remove saved keys, custom headers, and unknown fields. A legacy key already loaded can remain in volatile state until the tab closes. Project packs, workflow history, and exports run through secret redaction. Do not place secrets in ordinary prompt text; arbitrary user prose cannot be reliably distinguished from credentials.

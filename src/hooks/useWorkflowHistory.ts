@@ -18,7 +18,9 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setWorkflowHistory(parsed);
+          const sanitized = recursiveSanitize(parsed);
+          localStorage.setItem('prompt_refinery_workflow_history', JSON.stringify(sanitized));
+          setWorkflowHistory(sanitized);
         }
       }
     } catch (err) {
@@ -69,8 +71,8 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
         : type === 'design_audit'
           ? (`UX Audit: ${cleanDesignAuditResult?.projectName || cleanPrompt.substring(0, 30)}...`)
           : (isBlueprint 
-            ? (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`)
-            : (bpOrResult.title?.trim() || `${cleanPrompt.substring(0, 30)}...`));
+            ? (cleanBpOrResult?.title?.trim() || `${cleanPrompt.substring(0, 30)}...`)
+            : (cleanBpOrResult?.title?.trim() || `${cleanPrompt.substring(0, 30)}...`));
       
     const summary = type === 'pipeline'
       ? `Refinery Pipeline (${Object.keys(cleanPipeline?.stages || {}).filter(k => cleanPipeline?.stages[k]).length}/4 completed stages)`
@@ -79,8 +81,8 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
         : type === 'design_audit'
           ? `Design Principles Audit (UX Score: ${cleanDesignAuditResult?.overall_score || 0}/10)`
           : (isBlueprint
-            ? (bpOrResult.summary?.trim() || "No summary details successfully mapped.")
-            : (bpOrResult.content ? `${bpOrResult.content.substring(0, 80)}...` : "Recipe output generated."));
+            ? (cleanBpOrResult?.summary?.trim() || "No summary details successfully mapped.")
+            : (cleanBpOrResult?.content ? `${cleanBpOrResult.content.substring(0, 80)}...` : "Recipe output generated."));
 
     const newItem: WorkflowHistoryItem = {
       id: `run_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -91,13 +93,13 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
       rawPrompt: cleanPrompt,
       projectContext: cleanContext,
       conversationHistory: cleanHistory,
-      recipeId: recipeId || (isBlueprint ? 'blueprint' : bpOrResult?.recipeId),
+      recipeId: recipeId || (isBlueprint ? 'blueprint' : cleanBpOrResult?.recipeId),
       blueprint: isBlueprint ? cleanBpOrResult : undefined,
       recipeResult: (!isBlueprint && type !== 'pipeline' && type !== 'project' && type !== 'design_audit') ? cleanBpOrResult : undefined,
       selectedTab: activeTab,
-      sparkTitle,
+      sparkTitle: sparkTitle ? recursiveSanitize(sparkTitle) : undefined,
       sparkNovelty,
-      sparkTags,
+      sparkTags: sparkTags ? recursiveSanitize(sparkTags) : undefined,
       type: type || 'blueprint',
       pipeline: type === 'pipeline' ? cleanPipeline : undefined,
       projectResult: type === 'project' ? cleanProjectResult : undefined,

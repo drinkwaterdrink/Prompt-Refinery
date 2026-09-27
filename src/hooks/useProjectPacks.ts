@@ -15,6 +15,7 @@ import { downloadJSON } from '../lib/exporters';
 export function useProjectPacks(showToast: (msg: string) => void) {
   const [projectPacks, setProjectPacks] = useState<ProjectContextPack[]>([]);
   const [activePackId, setActivePackId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   // 1. Initial load from LocalStorage with fallback and corruption safety
   useEffect(() => {
@@ -37,12 +38,10 @@ export function useProjectPacks(showToast: (msg: string) => void) {
           setProjectPacks(validPacks);
         } else {
           // Fallback if not an array
-          localStorage.setItem('prompt_refinery_project_packs', JSON.stringify(DEFAULT_PROJECT_PACKS));
           setProjectPacks(DEFAULT_PROJECT_PACKS);
         }
       } else {
         // Pre-fill with showcase default pack
-        localStorage.setItem('prompt_refinery_project_packs', JSON.stringify(DEFAULT_PROJECT_PACKS));
         setProjectPacks(DEFAULT_PROJECT_PACKS);
       }
 
@@ -55,22 +54,23 @@ export function useProjectPacks(showToast: (msg: string) => void) {
       console.error('Local storage project packs loading encountered a corruption error:', err);
       showToast('Could not load project context packs due to file corruption. Resetting storage.');
       // Reset safely
-      localStorage.setItem('prompt_refinery_project_packs', JSON.stringify(DEFAULT_PROJECT_PACKS));
       setProjectPacks(DEFAULT_PROJECT_PACKS);
+    } finally {
+      setHydrated(true);
     }
   }, [showToast]);
 
-  // Helper to persist list
-  const persistPacks = useCallback((packsList: ProjectContextPack[]) => {
+  // Persist after React commits; functional state updaters stay pure.
+  useEffect(() => {
+    if (!hydrated) return;
     try {
-      const sanitized = packsList.map(p => sanitizeProjectPack(p));
+      const sanitized = projectPacks.map(p => sanitizeProjectPack(p));
       localStorage.setItem('prompt_refinery_project_packs', JSON.stringify(sanitized));
-      setProjectPacks(sanitized);
     } catch (saveErr) {
       console.error('Failed to save project packs to LocalStorage:', saveErr);
       showToast('Error persisting project context packs.');
     }
-  }, [showToast]);
+  }, [projectPacks, hydrated, showToast]);
 
   // Set active pack and persist
   const selectActivePack = useCallback((id: string | null) => {
@@ -89,7 +89,7 @@ export function useProjectPacks(showToast: (msg: string) => void) {
   // CRUD: Create
   const createPack = useCallback((packData: Omit<ProjectContextPack, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newPack: ProjectContextPack = {
-      ...packData,
+      ...sanitizeProjectPack(packData as ProjectContextPack),
       id: `pack_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toLocaleString(),
       updatedAt: new Date().toLocaleString()
@@ -97,7 +97,6 @@ export function useProjectPacks(showToast: (msg: string) => void) {
 
     setProjectPacks((prev) => {
       const next = [...prev, newPack];
-      persistPacks(next);
       return next;
     });
     
@@ -105,7 +104,7 @@ export function useProjectPacks(showToast: (msg: string) => void) {
     selectActivePack(newPack.id);
     showToast(`Project context pack "${newPack.name}" created.`);
     return newPack;
-  }, [persistPacks, selectActivePack, showToast]);
+  }, [selectActivePack, showToast]);
 
   // CRUD: Update
   const updatePack = useCallback((id: string, packData: Partial<ProjectContextPack>) => {
@@ -114,30 +113,28 @@ export function useProjectPacks(showToast: (msg: string) => void) {
         if (pack.id === id) {
           return {
             ...pack,
-            ...packData,
+            ...sanitizeProjectPack(packData as ProjectContextPack),
             updatedAt: new Date().toLocaleString()
           };
         }
         return pack;
       });
-      persistPacks(next);
       return next;
     });
     showToast('Project context pack updated.');
-  }, [persistPacks, showToast]);
+  }, [showToast]);
 
   // CRUD: Delete
   const deletePack = useCallback((id: string) => {
     setProjectPacks((prev) => {
       const next = prev.filter(pack => pack.id !== id);
-      persistPacks(next);
       return next;
     });
     if (activePackId === id) {
       selectActivePack(null);
     }
     showToast('Project context pack removed.');
-  }, [activePackId, persistPacks, selectActivePack, showToast]);
+  }, [activePackId, selectActivePack, showToast]);
 
   // CRUD: Duplicate
   const duplicatePack = useCallback((id: string) => {
@@ -145,7 +142,7 @@ export function useProjectPacks(showToast: (msg: string) => void) {
     if (!target) return;
 
     const duplicated: ProjectContextPack = {
-      ...target,
+      ...sanitizeProjectPack(target),
       id: `pack_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name: `${target.name} Copy`,
       createdAt: new Date().toLocaleString(),
@@ -154,19 +151,18 @@ export function useProjectPacks(showToast: (msg: string) => void) {
 
     setProjectPacks((prev) => {
       const next = [...prev, duplicated];
-      persistPacks(next);
       return next;
     });
 
     selectActivePack(duplicated.id);
     showToast(`Duplicated pack as "${duplicated.name}".`);
-  }, [projectPacks, persistPacks, selectActivePack, showToast]);
+  }, [projectPacks, selectActivePack, showToast]);
 
   // Export Individual JSON Pack
   const exportPackJSON = useCallback((id: string) => {
     const target = projectPacks.find(pack => pack.id === id);
     if (!target) return;
-    downloadJSON(target, `${target.name.toLowerCase().replace(/\s+/g, '_')}_context_pack.json`);
+    downloadJSON(sanitizeProjectPack(target), `${target.name.toLowerCase().replace(/\s+/g, '_')}_context_pack.json`);
     showToast(`Exported "${target.name}" pack JSON.`);
   }, [projectPacks, showToast]);
 
@@ -195,7 +191,6 @@ export function useProjectPacks(showToast: (msg: string) => void) {
 
           setProjectPacks((prev) => {
             const next = [...prev, importedPack];
-            persistPacks(next);
             return next;
           });
 
@@ -209,7 +204,7 @@ export function useProjectPacks(showToast: (msg: string) => void) {
       };
       reader.readAsText(file);
     });
-  }, [persistPacks, selectActivePack, showToast]);
+  }, [selectActivePack, showToast]);
 
   return {
     projectPacks,

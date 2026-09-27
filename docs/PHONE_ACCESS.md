@@ -63,7 +63,7 @@ Follow these steps to create an **Inbound Firewall Rule**:
 
 To quickly verify if your phone can reach the backend server without loading the full frontend shell, navigate to the health diagnostic endpoint in your phone's browser:
 ```text
-http://[YOUR-PC-IP-ADDRESS]:3000/api/health
+http://[YOUR-PC-IP-ADDRESS]:3000/healthz
 ```
 If successful, you will see a JSON response confirming connectivity:
 ```json

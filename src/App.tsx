@@ -4,7 +4,9 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Sparkles, History, Upload, Settings, RotateCcw } from 'lucide-react';
+import { Sparkles, History, Upload, Settings, RotateCcw, LogOut } from 'lucide-react';
+import { apiFetch } from './lib/api/client';
+import { migrateProfiles, persistentProfiles } from './lib/profileStorage';
 
 import { ConversationHistoryRow, WorkflowHistoryItem, GoalContractData } from './types';
 import { ConnectionProfile } from './lib/providers/types';
@@ -157,8 +159,12 @@ export default function App() {
     const saved = localStorage.getItem('prompt_refinery_connection_profiles');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved) as ConnectionProfile[];
-        const merged = [...parsed];
+        const { profiles, rewritten } = migrateProfiles(saved);
+        if (rewritten !== null) {
+          try { localStorage.setItem('prompt_refinery_connection_profiles', rewritten); }
+          catch { localStorage.removeItem('prompt_refinery_connection_profiles'); }
+        }
+        const merged = [...profiles];
         defaultProfiles.forEach(def => {
           if (!merged.some(p => p.id === def.id)) {
             merged.push(def);
@@ -190,7 +196,8 @@ export default function App() {
 
   // Sync connectionProfiles & activeProfileId to localStorage
   useEffect(() => {
-    localStorage.setItem('prompt_refinery_connection_profiles', JSON.stringify(connectionProfiles));
+    try { localStorage.setItem('prompt_refinery_connection_profiles', JSON.stringify(persistentProfiles(connectionProfiles))); }
+    catch { /* Keep profiles in memory if browser storage is unavailable. */ }
   }, [connectionProfiles]);
 
   useEffect(() => {
@@ -234,7 +241,7 @@ export default function App() {
         return;
       }
       try {
-        const res = await fetch('/api/health');
+        const res = await apiFetch('/api/health', { timeoutMs: 4000 });
         if (res.ok) {
           setNetworkStatus('online');
         } else {
@@ -631,7 +638,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch('/api/sparks', {
+      const response = await apiFetch('/api/sparks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -740,8 +747,8 @@ export default function App() {
   };
 
   // Enhance Prompt wrapper
-  const handleEnhancePrompt = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEnhancePrompt = (e?: React.FormEvent) => {
+    e?.preventDefault();
     enhancePrompt(rawPrompt, projectContext, historyRows, activeTab, refinementProfile, activePack || undefined);
   };
 
@@ -990,6 +997,16 @@ export default function App() {
           </button>
 
           {/* Settings Button */}
+          <button type="button" onClick={async () => {
+            try {
+              const response = await apiFetch('/api/auth/logout', { method: 'POST', timeoutMs: 8000 });
+              if (!response.ok) throw new Error('Logout failed');
+              window.dispatchEvent(new Event('prompt-refinery-auth-required'));
+            } catch { showToast('Could not log out. Please try again when online.'); }
+          }}
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 px-3 py-1.5 rounded-lg flex items-center gap-1.5" title="Lock workspace">
+            <LogOut className="h-3.5 w-3.5" /><span className="hidden md:inline">Lock</span>
+          </button>
           <button
             type="button"
             id="settings-gear-button"

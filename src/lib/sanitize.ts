@@ -14,6 +14,8 @@ const SECRET_PATTERNS = [
   /Bearer\s+[a-zA-Z0-9_\-\.]+/gi,
   /password=["']?[a-zA-Z0-9_\-]+["']?/gi,
   /token=["']?[a-zA-Z0-9_\-]+["']?/gi,
+  /(["']?(?:apiKey|api_key|access_token|password|authorization|cookie)["']?\s*:\s*["'])[^"]+(?=["'])/gi,
+  /([?&](?:api_key|token|key|password)=)[^&#\s]+/gi,
   /sk-[a-zA-Z0-9]{20,}/g, // common API key structures
   /AIzaSy[a-zA-Z0-9_\-]{33}/g
 ];

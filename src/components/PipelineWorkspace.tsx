@@ -26,7 +26,7 @@ interface PipelineWorkspaceProps {
   rawPrompt: string;
   projectContext: string;
   conversationHistory: ConversationHistoryRow[];
-  generationMode: 'mock' | 'gemini';
+  generationMode: 'mock' | 'gemini' | 'custom_openai';
   showToast: (msg: string) => void;
 }
 

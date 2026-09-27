@@ -355,7 +355,7 @@ ${constraintsMarkdown}
             {/* Verification Gate Settings */}
             <div className="flex flex-col gap-3 border-t border-[#1F1F1F] pt-4">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                4. Verification Gate <HelpCircle className="h-3.5 w-3.5 text-slate-500" title="Testing framework configuration presets" />
+                4. Verification Gate <span title="Testing framework configuration presets"><HelpCircle className="h-3.5 w-3.5 text-slate-500" /></span>
               </label>
 
               {/* Presets List */}
