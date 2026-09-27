@@ -6,6 +6,7 @@
 import React from 'react';
 import { X, RefreshCw, Sparkles, BookOpen, AlertTriangle } from 'lucide-react';
 import { SparkIdea } from '../types';
+import { useOverlayFocus } from '../hooks/useOverlayFocus';
 
 interface CreativeSparkDrawerProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
   onRefineSpark,
   geminiError
 }) => {
+  const drawerRef = useOverlayFocus<HTMLDivElement>(onClose);
   if (!isOpen) return null;
 
   return (
@@ -40,7 +42,7 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
       <div className="absolute inset-0 cursor-pointer" onClick={onClose}></div>
       
       {/* Drawer body */}
-      <div className="relative w-full sm:max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in">
+      <div ref={drawerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Creative Spark" className="relative w-full sm:max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in pwa-drawer">
         
         {/* Header Section */}
         <div className="p-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#161616]/40">
@@ -51,6 +53,7 @@ export const CreativeSparkDrawer: React.FC<CreativeSparkDrawerProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close Creative Spark"
             className="text-slate-500 hover:text-white transition p-1 cursor-pointer"
           >
             <X className="h-5 w-5" />

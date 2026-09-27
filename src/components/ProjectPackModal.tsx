@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FolderGit, Save } from 'lucide-react';
 import { ProjectContextPack } from '../types';
+import { useOverlayFocus } from '../hooks/useOverlayFocus';
 
 interface ProjectPackModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
   onSave,
   onUpdate
 }) => {
+  const dialogRef = useOverlayFocus<HTMLDivElement>(onClose);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
@@ -98,14 +100,14 @@ export const ProjectPackModal: React.FC<ProjectPackModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in pwa-modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pack-modal-title"
     >
       <div className="absolute inset-0 cursor-pointer" onClick={onClose}></div>
       
-      <div className="relative w-full max-w-2xl bg-[#0F0E0E] border border-[#222222] rounded-2xl shadow-3xl overflow-hidden flex flex-col mx-4 animate-scale-up max-h-[90vh]">
+      <div ref={dialogRef} tabIndex={-1} className="relative w-full max-w-2xl bg-[#0F0E0E] border border-[#222222] rounded-2xl shadow-3xl overflow-hidden flex flex-col mx-4 animate-scale-up max-h-[90dvh] pwa-pack-dialog">
         
         {/* Header */}
         <div className="p-5 border-b border-[#1F1F1F] flex items-center justify-between bg-[#161616]/50">

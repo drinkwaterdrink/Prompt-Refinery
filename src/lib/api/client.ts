@@ -2,9 +2,15 @@ export class ApiError extends Error {
   constructor(message: string, public status: number, public kind: 'network' | 'timeout' | 'http') { super(message); }
 }
 
+let localOnly = false;
+export function setLocalOnlyMode(value: boolean) { localOnly = value; }
+
 type ApiOptions = Omit<RequestInit, 'body'> & { body?: BodyInit | null; json?: unknown; timeoutMs?: number };
 
 export async function apiFetch(url: `/api/${string}`, options: ApiOptions = {}) {
+  if (localOnly && url !== '/api/auth/status') {
+    throw new ApiError('Internet connection required for live AI generation.', 0, 'network');
+  }
   const { json, timeoutMs = 300_000, ...init } = options;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

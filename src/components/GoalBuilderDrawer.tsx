@@ -54,6 +54,10 @@ export const GoalBuilderDrawer: React.FC<GoalBuilderDrawerProps> = ({
   showToast
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    return () => opener?.focus();
+  }, []);
   const [title, setTitle] = useState('');
   const [objective, setObjective] = useState('');
   const [includedAssets, setIncludedAssets] = useState('');
@@ -208,7 +212,7 @@ ${constraintsMarkdown}
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end font-sans">
+    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end font-sans" role="dialog" aria-modal="true" aria-label="Goal Builder">
       {/* Backdrop Click Overlay */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in" 
@@ -218,7 +222,7 @@ ${constraintsMarkdown}
       {/* Drawer Body Panel */}
       <div 
         ref={drawerRef}
-        className="relative w-full max-w-2xl bg-bg-panel border-l border-border-subtle h-full flex flex-col shadow-2xl overflow-hidden animate-slide-in focus:outline-none"
+        className="relative w-full max-w-2xl bg-bg-panel border-l border-border-subtle h-full flex flex-col shadow-2xl overflow-hidden animate-slide-in focus:outline-none pwa-drawer"
         tabIndex={-1}
       >
         {/* Drawer Header */}

@@ -28,7 +28,8 @@ Prompt Refinery is a premium, high-fidelity developer workstation designed to ru
 * **Styling**: TailwindCSS v4 configured with the Obsidian Cybertech Theme (electric cyan primary highlights and slate dark mode).
 * **Backend**: Node.js & Express.js.
 * **AI Engines Integration**: Google Gemini SDK & custom OpenAI-compatible endpoint router.
-* **Bundler & Compiler**: Vite (for client assets) and esbuild (for server compilation).
+* **Bundler & Compiler**: Vite, Workbox via `vite-plugin-pwa`, and esbuild for the server.
+* **Local history**: IndexedDB with migration from legacy browser storage.
 
 ---
 
@@ -75,6 +76,7 @@ Prompt Refinery is a premium, high-fidelity developer workstation designed to ru
   npm run typecheck
   ```
   *Runs non-emitting strict static compilation checks over all modules.*
+* **Production PWA browser tests**: Run `npm run test:pwa` after `npm run build` (install Playwright Chromium first with `npx playwright install chromium`).
 
 ---
 
@@ -87,6 +89,7 @@ To learn more about configuring, extending, or deploying Prompt Refinery, explor
 3. [📱 Mobile Local Network Access](docs/PHONE_ACCESS.md) — Local network access guidance.
 4. [☁️ Cloud Deployment Readiness](docs/DEPLOYMENT.md) — Deployment guidance.
 5. [🔒 Security & Key Hygiene Policy](docs/SECURITY.md) — Authentication and credential handling.
+6. [📲 PWA Install, Updates & Offline Use](docs/PWA.md) — Android installation, local data, and production PWA testing.
 
 ---
 

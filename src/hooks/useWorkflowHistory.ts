@@ -3,31 +3,59 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WorkflowHistoryItem, ConversationHistoryRow, PromptBlueprint } from '../types';
 import { recursiveSanitize } from '../lib/sanitize';
+import { migrateLegacyHistory, readWorkflowHistory, replaceWorkflowHistory, LEGACY_HISTORY_KEY } from '../lib/historyStorage';
 
 export function useWorkflowHistory(showToast: (msg: string) => void) {
   const [workflowHistory, setWorkflowHistory] = useState<WorkflowHistoryItem[]>([]);
   const [isWorkflowSidebarOpen, setIsWorkflowSidebarOpen] = useState<boolean>(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [legacyFallback, setLegacyFallback] = useState(false);
+  const persistQueue = useRef<Promise<void>>(Promise.resolve());
 
   // Load workflow history once on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('prompt_refinery_workflow_history');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const sanitized = recursiveSanitize(parsed);
-          localStorage.setItem('prompt_refinery_workflow_history', JSON.stringify(sanitized));
-          setWorkflowHistory(sanitized);
+    let cancelled = false;
+    (async () => {
+      try {
+        await migrateLegacyHistory();
+        const saved = await readWorkflowHistory();
+        if (!cancelled) {
+          setWorkflowHistory(prev => [...prev, ...saved.filter(item => !prev.some(existing => existing.id === item.id))]);
+          setHydrated(true);
+        }
+      } catch (err) {
+        console.error('Workflow history storage unavailable:', err);
+        if (!cancelled) {
+          try {
+            const legacy = JSON.parse(localStorage.getItem(LEGACY_HISTORY_KEY) || '[]');
+            if (Array.isArray(legacy) && legacy.every(item => item && typeof item.id === 'string' && item.id && typeof item.title === 'string')) {
+              setWorkflowHistory(recursiveSanitize(legacy));
+              setLegacyFallback(true);
+              setHydrated(true);
+            }
+          } catch { /* Leave the legacy data untouched. */ }
+          showToast('History migration is unavailable. Existing records are preserved in browser storage.');
         }
       }
-    } catch (err) {
-      console.error("Local storage prompt runs history load was corrupted:", err);
-      showToast("Could not load saving workflow history.");
-    }
+    })();
+    return () => { cancelled = true; };
   }, [showToast]);
+
+  // Serialize IndexedDB snapshots after React commits; state updaters remain pure.
+  useEffect(() => {
+    if (!hydrated) return;
+    const snapshot = workflowHistory;
+    persistQueue.current = persistQueue.current.then(() => {
+      if (legacyFallback) localStorage.setItem(LEGACY_HISTORY_KEY, JSON.stringify(snapshot));
+      else return replaceWorkflowHistory(snapshot);
+    }).catch(err => {
+      console.error('Workflow history save failed:', err);
+      showToast('Could not save workflow history. Check available device storage.');
+    });
+  }, [workflowHistory, hydrated, legacyFallback, showToast]);
 
   const saveToWorkflowHistory = useCallback((
     prompt: string,
@@ -113,11 +141,6 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     setWorkflowHistory((prev) => {
       // Filter duplicate titles and cap at 50 runs
       const filtered = [newItem, ...prev.filter(item => item.title !== newItem.title)].slice(0, 50);
-      try {
-        localStorage.setItem('prompt_refinery_workflow_history', JSON.stringify(filtered));
-      } catch (saveErr) {
-        console.error("Local storage saving exception:", saveErr);
-      }
       return filtered;
     });
   }, []);
@@ -125,11 +148,6 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
   const deleteWorkflowHistoryItem = useCallback((id: string) => {
     setWorkflowHistory((prev) => {
       const next = prev.filter(item => item.id !== id);
-      try {
-        localStorage.setItem('prompt_refinery_workflow_history', JSON.stringify(next));
-      } catch (err) {
-        console.error(err);
-      }
       return next;
     });
     showToast("Removed saved work record.");
@@ -139,11 +157,7 @@ export function useWorkflowHistory(showToast: (msg: string) => void) {
     const confirmClear = window.confirm("Are you sure you want to delete all saved workflow runs? This action cannot be undone.");
     if (confirmClear) {
       setWorkflowHistory([]);
-      try {
-        localStorage.removeItem('prompt_refinery_workflow_history');
-      } catch (err) {
-        console.error(err);
-      }
+      localStorage.removeItem(LEGACY_HISTORY_KEY);
       showToast("Cleared run history.");
     }
   }, [showToast]);

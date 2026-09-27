@@ -41,3 +41,13 @@ export function downloadMarkdown(content: string, fileName: string): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/** Share a sanitized file through the native Android/iOS share sheet when available. */
+export async function shareFile(data: unknown, fileName: string, type: 'application/json' | 'text/markdown' | 'text/plain'): Promise<'shared' | 'cancelled' | 'unavailable'> {
+  if (!navigator.share || !navigator.canShare) return 'unavailable';
+  const content = typeof data === 'string' ? recursiveSanitize(data) : JSON.stringify(recursiveSanitize(data), null, 2);
+  const file = new File([content], safeExportFileName(fileName), { type });
+  if (!navigator.canShare({ files: [file] })) return 'unavailable';
+  try { await navigator.share({ files: [file], title: 'Prompt Refinery' }); return 'shared'; }
+  catch (error) { if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'; throw error; }
+}

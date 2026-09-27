@@ -4,8 +4,10 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Sparkles, History, Upload, Settings, RotateCcw, LogOut } from 'lucide-react';
+import { Sparkles, History, Upload, Settings, RotateCcw, LogOut, FileText, Workflow, FolderKanban, ScanSearch, Share2 } from 'lucide-react';
 import { apiFetch } from './lib/api/client';
+import { useWorkspaceAccess } from './components/AuthGate';
+import { usePwa } from './hooks/usePwa';
 import { migrateProfiles, persistentProfiles } from './lib/profileStorage';
 
 import { ConversationHistoryRow, WorkflowHistoryItem, GoalContractData } from './types';
@@ -19,29 +21,32 @@ import { useDesignAudit } from './hooks/useDesignAudit';
 import { useProjectPacks } from './hooks/useProjectPacks';
 import { copyToClipboardSafe } from './lib/clipboard';
 import { detectAndParseImport } from './lib/json';
-import { downloadJSON, downloadMarkdown } from './lib/exporters';
+import { downloadJSON, downloadMarkdown, shareFile } from './lib/exporters';
 import { REFINEMENT_PROFILES, getProfileById } from './lib/promptProfiles';
 import { serializePackToMarkdown } from './lib/projectPacks';
 
 // Components
 import { Toast } from './components/Toast';
+import { PwaUpdateNotice } from './components/PwaUpdateNotice';
 import { EmptyBlueprintState } from './components/EmptyBlueprintState';
 import { LoadingState } from './components/LoadingState';
-import { SettingsModal } from './components/SettingsModal';
-import { WorkflowHistorySidebar } from './components/WorkflowHistorySidebar';
 import { InputPanel } from './components/InputPanel';
-import { BlueprintExplorer } from './components/BlueprintExplorer';
 import { PipelineWorkspace } from './components/PipelineWorkspace';
 import { ProjectWorkspace } from './components/ProjectWorkspace';
 import { ProjectInputPanel } from './components/ProjectInputPanel';
-import { CreativeSparkDrawer } from './components/CreativeSparkDrawer';
-import { GoalBuilderDrawer } from './components/GoalBuilderDrawer';
 import { DesignAuditInputPanel } from './components/DesignAuditInputPanel';
 import { DesignAuditWorkspace } from './components/DesignAuditWorkspace';
 import { ProjectPackModal } from './components/ProjectPackModal';
 import { SparkIdea } from './types';
 
+const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(module => ({ default: module.SettingsModal })));
+const WorkflowHistorySidebar = React.lazy(() => import('./components/WorkflowHistorySidebar').then(module => ({ default: module.WorkflowHistorySidebar })));
+const CreativeSparkDrawer = React.lazy(() => import('./components/CreativeSparkDrawer').then(module => ({ default: module.CreativeSparkDrawer })));
+const GoalBuilderDrawer = React.lazy(() => import('./components/GoalBuilderDrawer').then(module => ({ default: module.GoalBuilderDrawer })));
+const BlueprintExplorer = React.lazy(() => import('./components/BlueprintExplorer').then(module => ({ default: module.BlueprintExplorer })));
+
 export default function App() {
+  const { localOnly, connection } = useWorkspaceAccess();
   // Toast Alert hook
   const { toastMessage, showToast } = useToast();
 
@@ -222,10 +227,11 @@ export default function App() {
 
 
   // Network Connectivity & Health Polling
-  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'server_unavailable'>('online');
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'server_unavailable'>(connection);
 
   useEffect(() => {
-    const handleOnline = () => setNetworkStatus('online');
+    setNetworkStatus(connection);
+    const handleOnline = () => { void checkHealth(); };
     const handleOffline = () => setNetworkStatus('offline');
 
     window.addEventListener('online', handleOnline);
@@ -236,6 +242,7 @@ export default function App() {
     }
 
     const checkHealth = async () => {
+      if (localOnly) { setNetworkStatus(connection); return; }
       if (!navigator.onLine) {
         setNetworkStatus('offline');
         return;
@@ -260,7 +267,7 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
     };
-  }, []);
+  }, [localOnly, connection]);
 
   const customOpenAI = {
     apiUrl: customApiUrl,
@@ -538,6 +545,7 @@ export default function App() {
 
   const handleProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (localOnly && generationMode !== 'mock') { showToast('Internet connection required for live AI generation. Switch to Mock Mode.'); return; }
     analyzeProject(generationMode, {
       model,
       temperature,
@@ -551,6 +559,7 @@ export default function App() {
 
   const handleDesignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (localOnly && generationMode !== 'mock') { showToast('Internet connection required for live AI generation. Switch to Mock Mode.'); return; }
     analyzeDesign(generationMode, {
       model,
       temperature,
@@ -620,7 +629,7 @@ export default function App() {
     setIsGeneratingSparks(true);
     setGeminiSparksError(null);
 
-    if (generationMode === 'mock' || !navigator.onLine) {
+    if (generationMode === 'mock' || localOnly || !navigator.onLine) {
       setTimeout(async () => {
         try {
           const { generateLocalSparks } = await import('./lib/sparksMockGenerator');
@@ -749,11 +758,13 @@ export default function App() {
   // Enhance Prompt wrapper
   const handleEnhancePrompt = (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (localOnly && generationMode !== 'mock') { showToast('Internet connection required for live AI generation. Switch to Mock Mode.'); return; }
     enhancePrompt(rawPrompt, projectContext, historyRows, activeTab, refinementProfile, activePack || undefined);
   };
 
   // Refine Blueprint wrapper
   const handleRefineBlueprint = () => {
+    if (localOnly && generationMode !== 'mock') { showToast('Internet connection required for live AI generation.'); return; }
     refineBlueprint(rawPrompt, projectContext, historyRows, activeTab, refinementProfile, activePack || undefined);
   };
 
@@ -908,14 +919,37 @@ export default function App() {
     showToast('Controls cleared.');
   }, [clearPipeline, clearProject, clearAudit, showToast]);
 
+  const paidOperationActive = isGenerating || isRefining || isGeneratingProject || isGeneratingAudit || isGeneratingSparks || Object.values(stageStatuses).includes('generating');
+  const pwa = usePwa(paidOperationActive);
+  const hasShareableOutput = workflowMode === 'blueprint' ? !!(blueprint || recipeResult)
+    : workflowMode === 'pipeline' ? !!pipeline
+    : workflowMode === 'project' ? !!projectResult : !!auditResult;
+  const shareCurrentOutput = async () => {
+    const data = workflowMode === 'blueprint' ? (recipeResult?.content || blueprint)
+      : workflowMode === 'pipeline' ? pipeline : workflowMode === 'project' ? projectResult : auditResult;
+    if (!data) return;
+    const markdown = typeof data === 'string';
+    const name = `prompt-refinery-${workflowMode}.${markdown ? 'md' : 'json'}`;
+    try {
+      const result = await shareFile(data, name, markdown ? 'text/markdown' : 'application/json');
+      if (result === 'unavailable') {
+        if (markdown) downloadMarkdown(data, name); else downloadJSON(data, name);
+        showToast('File downloaded. Native sharing is unavailable in this browser.');
+      }
+    } catch { showToast('Could not open the share sheet. Download remains available.'); }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] font-sans text-slate-100 flex flex-col selection:bg-primary/30 selection:text-white" id="prompt-refinery-app">
+    <div className="min-h-dvh bg-[#0A0A0A] font-sans text-slate-100 flex flex-col selection:bg-primary/30 selection:text-white" id="prompt-refinery-app">
       
       {/* Toast Alert Portal */}
       <Toast message={toastMessage} />
 
+      {pwa.showUpdateNotice && <PwaUpdateNotice pending={pwa.updatePending} onUpdate={pwa.updateNow} onLater={pwa.dismissUpdate} />}
+      {localOnly && <div className="pwa-offline-banner" role="status">{connection === 'offline' ? 'Offline' : 'Server unavailable'} — local features only. Internet connection required for live AI generation.</div>}
+
       {/* Primary Header Segment */}
-      <header className="border-b border-[#1F1F1F] bg-[#0E0E0E]/90 backdrop-blur sticky top-0 z-40 py-3.5 px-4 md:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <header className="border-b border-[#1F1F1F] bg-[#0E0E0E]/90 backdrop-blur sticky top-0 z-40 py-3.5 px-4 md:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 pwa-header">
         <div className="flex items-center gap-3">
           <div className="bg-[#161616] border border-[#262626] p-2.5 rounded-xl shadow-lg shadow-black/50 text-primary">
             <Sparkles className="h-5 w-5" />
@@ -930,7 +964,7 @@ export default function App() {
                   networkStatus === 'online'
                     ? 'bg-emerald-950/25 border-emerald-500/35 text-emerald-400'
                     : networkStatus === 'offline'
-                    ? 'bg-red-950/25 border-red-500/35 text-rose-300 animate-pulse'
+                    ? 'bg-red-950/25 border-red-500/35 text-rose-300'
                     : 'bg-amber-950/25 border-amber-500/35 text-amber-400'
                 }`}
                 title={networkStatus === 'online' 
@@ -956,7 +990,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-center font-sans">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-center font-sans pwa-header-actions">
           
           {/* History Sidebar Toggle */}
           <button
@@ -964,6 +998,7 @@ export default function App() {
             onClick={() => setIsWorkflowSidebarOpen(true)}
             className="relative text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-primary/50 text-primary px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Open saved workflow runs history panel"
+            aria-label="Open workflow history"
           >
             <History className="h-3.5 w-3.5 text-primary" />
             <span className="hidden md:inline">History</span>
@@ -991,20 +1026,21 @@ export default function App() {
             onClick={() => fileInputRef.current?.click()}
             className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-300 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Import an existing blueprint JSON template"
+            aria-label="Import blueprint JSON"
           >
             <Upload className="h-3.5 w-3.5 text-primary" />
             <span className="hidden md:inline">Import</span>
           </button>
 
           {/* Settings Button */}
-          <button type="button" onClick={async () => {
+          <button type="button" disabled={localOnly} onClick={async () => {
             try {
               const response = await apiFetch('/api/auth/logout', { method: 'POST', timeoutMs: 8000 });
               if (!response.ok) throw new Error('Logout failed');
               window.dispatchEvent(new Event('prompt-refinery-auth-required'));
             } catch { showToast('Could not log out. Please try again when online.'); }
           }}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 px-3 py-1.5 rounded-lg flex items-center gap-1.5" title="Lock workspace">
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-40" title={localOnly ? 'Reconnect to log out of the server session' : 'Lock workspace'} aria-label="Lock workspace">
             <LogOut className="h-3.5 w-3.5" /><span className="hidden md:inline">Lock</span>
           </button>
           <button
@@ -1026,10 +1062,13 @@ export default function App() {
             onClick={() => setIsSparkDrawerOpen(true)}
             className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] hover:border-primary/50 text-primary px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 cursor-pointer shadow-sm focus-visible:ring-2 focus-visible:ring-primary/75 outline-none"
             title="Open Creative Spark Catalyst app idea generator drawer"
+            aria-label="Open Creative Spark"
           >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span>Creative Spark</span>
           </button>
+
+          {hasShareableOutput && <button type="button" onClick={() => void shareCurrentOutput()} aria-label="Share current output" title="Share current output" className="text-xs bg-[#161616] border border-[#262626] text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5"><Share2 className="h-4 w-4" /><span className="hidden md:inline">Share</span></button>}
           
           <button
             type="button"
@@ -1143,7 +1182,7 @@ export default function App() {
           {/* Tabs and Profile Selector Container */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 w-full animate-fade-in">
             {/* Workflow Mode Selector tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-1.5 p-1 bg-[#111111] border border-[#1F1F1F] rounded-xl flex-wrap sm:flex-nowrap pwa-desktop-workflow-tabs">
               <button
                 type="button"
                 onClick={() => setWorkflowMode('blueprint')}
@@ -1245,7 +1284,10 @@ export default function App() {
                 pipeline={pipeline}
                 stageStatuses={stageStatuses}
                 stageErrors={stageErrors}
-                onGenerateStage={(key) => generateStage(key, rawPrompt, projectContext, historyRows, refinementProfile)}
+                onGenerateStage={(key) => {
+                  if (localOnly && generationMode !== 'mock') { showToast('Internet connection required for live AI generation.'); return; }
+                  generateStage(key, rawPrompt, projectContext, historyRows, refinementProfile);
+                }}
                 onCopy={handleCopy}
                 rawPrompt={rawPrompt}
                 projectContext={projectContext}
@@ -1276,6 +1318,7 @@ export default function App() {
               )}
 
               {!isGenerating && (blueprint || recipeResult || validationErrors || geminiError) && (
+                <React.Suspense fallback={<div className="p-6 text-slate-400" role="status">Opening result…</div>}>
                 <BlueprintExplorer
                   blueprint={blueprint}
                   recipeResult={recipeResult}
@@ -1302,6 +1345,7 @@ export default function App() {
                   debugMode={debugMode}
                   onOpenGoalBuilder={handleOpenGoalBuilder}
                 />
+                </React.Suspense>
               )}
             </div>
 
@@ -1309,6 +1353,17 @@ export default function App() {
         </section>
 
       </main>
+
+      <nav className="pwa-mobile-nav" aria-label="Primary workflows">
+        {([
+          ['blueprint', 'Prompt', FileText],
+          ['pipeline', 'Pipeline', Workflow],
+          ['project', 'Project', FolderKanban],
+          ['design_audit', 'Audit', ScanSearch]
+        ] as const).map(([mode, label, Icon]) => <button key={mode} type="button" onClick={() => setWorkflowMode(mode)} aria-label={label} aria-current={workflowMode === mode ? 'page' : undefined} className={workflowMode === mode ? 'active' : ''}>
+          <Icon size={20} aria-hidden="true" /><span>{label}</span>
+        </button>)}
+      </nav>
 
       {/* Real-time Diagnostics HUD (Active in Debug Mode) */}
       {debugMode && (
@@ -1369,9 +1424,9 @@ export default function App() {
       <footer className="border-t border-[#1F1F1F] bg-[#0A0A0A] mt-12 py-6 px-4 md:px-6">
         <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Prompt Refinery v0.10 • Client Stage Sandbox</span>
+            <span>Prompt Refinery v{pwa.version} · {pwa.build}</span>
             <span className="w-1 h-1 rounded-full bg-slate-800"></span>
-            <span>All logs isolated on local domain</span>
+            <span>{localOnly ? 'Local features only' : 'Your workspace'}</span>
           </div>
           <div className="text-[11px] text-slate-600 font-mono text-center md:text-right">
             <span>Designed for precision-crafted prompt generation inside Google AI Studio</span>
@@ -1379,6 +1434,7 @@ export default function App() {
         </div>
       </footer>
 
+      <React.Suspense fallback={<div className="pwa-overlay-loading" role="status">Opening workspace panel…</div>}>
       {/* Sliding Workflow History Sidebar Overlay Drawer */}
       {isWorkflowSidebarOpen && (
         <WorkflowHistorySidebar
@@ -1394,6 +1450,7 @@ export default function App() {
       {/* Dynamic Settings and Credentials Modal */}
       {isSettingsOpen && (
         <SettingsModal
+          pwa={pwa}
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           generationMode={generationMode}
@@ -1466,6 +1523,7 @@ export default function App() {
           showToast={showToast}
         />
       )}
+      </React.Suspense>
 
     </div>
   );

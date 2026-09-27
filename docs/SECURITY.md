@@ -28,3 +28,5 @@ Development may use HTTP localhost providers such as Ollama. Custom provider hos
 ## Browser data
 
 Connection profiles persist only id, name, provider, URL, model, and JSON mode. Startup rewrites legacy profiles to remove saved keys, custom headers, and unknown fields. A legacy key already loaded can remain in volatile state until the tab closes. Project packs, workflow history, and exports run through secret redaction. Do not place secrets in ordinary prompt text; arbitrary user prose cannot be reliably distinguished from credentials.
+
+Workflow History is stored in IndexedDB; migration removes the legacy localStorage key only after a successful transaction. A non-secret local-only marker allows an already authenticated browser to reopen saved data without network access. It never grants access to Express APIs. All `/api/*` responses are network-only in the PWA service worker. Backups omit credential fields and session material; inspect files before sharing them if ordinary prompt prose contains sensitive information.

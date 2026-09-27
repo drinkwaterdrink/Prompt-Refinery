@@ -6,6 +6,7 @@
 import React from 'react';
 import { BookOpen, X, RotateCcw, Trash2 } from 'lucide-react';
 import { WorkflowHistoryItem } from '../types';
+import { useOverlayFocus } from '../hooks/useOverlayFocus';
 
 interface WorkflowHistorySidebarProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const WorkflowHistorySidebar: React.FC<WorkflowHistorySidebarProps> = ({
   onDeleteItem,
   onClearAll
 }) => {
+  const drawerRef = useOverlayFocus<HTMLDivElement>(onClose);
   if (!isOpen) return null;
 
   return (
@@ -32,7 +34,7 @@ export const WorkflowHistorySidebar: React.FC<WorkflowHistorySidebarProps> = ({
       <div className="absolute inset-0 cursor-pointer" onClick={onClose}></div>
       
       {/* Drawer body */}
-      <div className="relative w-full sm:max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in">
+      <div ref={drawerRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Workflow history" className="relative w-full sm:max-w-md bg-[#0F0E0E] h-full right-0 ml-auto border-l border-[#1F1F1F] flex flex-col shadow-2xl justify-between animate-slide-in pwa-drawer">
         <div className="p-4 border-b border-[#1F1F1F] flex items-center justify-between bg-[#161616]/40">
           <div className="flex items-center gap-2 text-primary">
             <BookOpen className="h-4.5 w-4.5" />
@@ -41,6 +43,7 @@ export const WorkflowHistorySidebar: React.FC<WorkflowHistorySidebarProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close workflow history"
             className="text-slate-500 hover:text-white transition p-1 cursor-pointer"
           >
             <X className="h-5 w-5" />

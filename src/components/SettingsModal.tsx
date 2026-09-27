@@ -2,6 +2,8 @@ import { apiFetch } from '../lib/api/client';
 import React from 'react';
 import { Settings, X, Trash2, Eye, EyeOff, ShieldAlert, Plus, Save } from 'lucide-react';
 import { ConnectionProfile } from '../lib/providers/types';
+import type { PwaState } from '../hooks/usePwa';
+import { PwaSettingsSection } from './PwaSettingsSection';
 
 const POPULAR_CUSTOM_MODELS = [
   'deepseek/deepseek-v3.2',
@@ -16,6 +18,7 @@ const POPULAR_CUSTOM_MODELS = [
 ];
 
 interface SettingsModalProps {
+  pwa: PwaState;
   isOpen: boolean;
   onClose: () => void;
   generationMode: 'mock' | 'gemini' | 'custom_openai';
@@ -56,6 +59,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
+  pwa,
   isOpen,
   onClose,
   generationMode,
@@ -90,6 +94,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   activeProfileId,
   setActiveProfileId
 }) => {
+  React.useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    return () => opener?.focus();
+  }, []);
   const [isTesting, setIsTesting] = React.useState(false);
   const [testResult, setTestResult] = React.useState<{ ok: boolean; message: string } | null>(null);
   const [headersError, setHeadersError] = React.useState<string | null>(null);
@@ -364,7 +372,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in" 
+      className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in pwa-modal-overlay"
       id="settings-modal"
       role="dialog"
       aria-modal="true"
@@ -376,7 +384,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       {/* Modal Box */}
       <div 
         ref={modalRef} 
-        className="relative w-full max-w-lg bg-bg-panel border border-border-subtle rounded-2xl shadow-3xl overflow-hidden flex flex-col mx-4 animate-scale-up focus:outline-none"
+        className="relative w-full max-w-lg bg-bg-panel border border-border-subtle rounded-2xl shadow-3xl overflow-hidden flex flex-col mx-4 animate-scale-up focus:outline-none pwa-settings-dialog"
         tabIndex={-1}
       >
         
@@ -397,7 +405,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Modal Scroll Body */}
-        <div className="p-6 overflow-y-auto max-h-[70vh] flex flex-col gap-5 text-sm">
+        <div className="p-6 overflow-y-auto max-h-[70vh] flex flex-col gap-5 text-sm pwa-settings-body">
           
           {/* 1. Connection Profiles Section */}
           <div className="flex flex-col gap-3 bg-[#161616]/40 p-4 border border-[#222222] rounded-xl">
@@ -827,12 +835,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               </div>
               <p className="text-[10.5px] text-slate-500 leading-normal">
-                Shows raw model results, JSON syntax, and server stack traces on failure.
+                Extra diagnostics are available during local development. Production errors remain sanitized.
               </p>
             </div>
 
           </div>
 
+          <PwaSettingsSection pwa={pwa} showToast={showToast} />
         </div>
 
         {/* Modal Bottom Buttons */}

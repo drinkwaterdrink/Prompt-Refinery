@@ -15,8 +15,10 @@ export const Toast: React.FC<ToastProps> = ({ message }) => {
 
   return (
     <div 
-      className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-[#121212] border border-primary/30 text-primary px-4 py-3 rounded-lg shadow-2xl animate-bounce backdrop-blur"
+      className="pwa-toast fixed top-4 right-4 z-50 flex items-center gap-2 bg-[#121212] border border-primary/30 text-primary px-4 py-3 rounded-lg shadow-2xl backdrop-blur"
       id="toast-alert"
+      role="status"
+      aria-live="polite"
     >
       <Zap className="h-4 w-4 text-primary fill-[#00e5ff]" />
       <span className="text-sm font-medium">{message}</span>

@@ -2106,7 +2106,7 @@ Ensure the scores, strengths, issues, wins, and implementation prompts generated
     app.use(express.static(distPath, { setHeaders: (res, filePath) => {
       const name = path.basename(filePath);
       if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      else if (name === 'index.html' || name === 'manifest.webmanifest' || name === 'sw.js' || name.startsWith('service-worker')) res.setHeader('Cache-Control', 'no-cache');
+      else if (name === 'index.html' || name === 'manifest.webmanifest' || name === 'sw.js' || name.startsWith('workbox-') || name.startsWith('registerSW')) res.setHeader('Cache-Control', 'no-cache');
     } }));
     app.get('*', (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
