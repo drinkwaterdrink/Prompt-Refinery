@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }, testInfo) => {
+  // The production login limiter permits five attempts per client per 15 minutes.
+  // Model separate browser clients without weakening that server protection.
+  const project = { desktop: 0, 'galaxy-s25-plus': 20, 'narrow-phone': 40 }[testInfo.project.name] ?? 60;
+  const scenario = testInfo.title.startsWith('production PWA') ? 1
+    : testInfo.title.startsWith('install action') ? 2
+    : testInfo.title.startsWith('online logout') ? 3 : 4;
+  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': `198.51.100.${project + scenario}` });
+});
+
 test('production PWA keeps the full workspace usable on desktop and phones', async ({ page, context, request }, testInfo) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
@@ -127,4 +137,84 @@ test('install action is hidden in standalone mode', async ({ page }, testInfo) =
   await page.locator('#settings-gear-button').click();
   await expect(page.getByText('Installed app')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Install Prompt Refinery' })).toHaveCount(0);
+});
+
+test('online logout and offline local lock keep the workspace locked until a fresh sign-in', async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  const logoutRequests: string[] = [];
+  page.on('request', request => { if (request.url().endsWith('/api/auth/logout')) logoutRequests.push(request.method()); });
+  await page.goto('/');
+  await page.locator('#access-password').fill(process.env.PWA_TEST_PASSWORD!);
+  await page.getByRole('button', { name: 'Unlock workspace' }).click();
+  await expect(page.locator('#prompt-refinery-app')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBe('1');
+  await page.evaluate(() => {
+    sessionStorage.setItem('prompt_refinery_byok', 'test-only-key');
+    sessionStorage.setItem('prompt_refinery_custom_headers', '{"X-Test-Key":"test-only-key"}');
+  });
+
+  await page.getByRole('button', { name: 'Lock workspace' }).click();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('prompt_refinery_byok'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('prompt_refinery_custom_headers'))).toBeNull();
+  await expect.poll(() => logoutRequests).toEqual(['POST']);
+
+  await page.locator('#access-password').fill(process.env.PWA_TEST_PASSWORD!);
+  await page.getByRole('button', { name: 'Unlock workspace' }).click();
+  await expect(page.locator('#prompt-refinery-app')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBe('1');
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('#prompt-refinery-app')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lock workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Lock workspace' }).click();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBeNull();
+  expect(logoutRequests).toEqual(['POST']);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  await context.setOffline(false);
+  await expect(page.locator('#access-password')).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  await page.locator('#access-password').fill(process.env.PWA_TEST_PASSWORD!);
+  await page.getByRole('button', { name: 'Unlock workspace' }).click();
+  await expect(page.locator('#prompt-refinery-app')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBe('1');
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText('Offline — local features only. Internet connection required for live AI generation.')).toBeVisible();
+});
+
+test('server-unavailable lock skips logout and a failed online logout reports its limit', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  const logoutRequests: string[] = [];
+  page.on('request', request => { if (request.url().endsWith('/api/auth/logout')) logoutRequests.push(request.method()); });
+  await page.goto('/');
+  await page.locator('#access-password').fill(process.env.PWA_TEST_PASSWORD!);
+  await page.getByRole('button', { name: 'Unlock workspace' }).click();
+  await expect(page.locator('#prompt-refinery-app')).toBeVisible();
+  await page.route('**/api/auth/status', route => route.abort());
+  await page.reload();
+  await expect(page.getByText('Server unavailable — local features only. Internet connection required for live AI generation.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lock workspace' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Lock workspace' }).click();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  await expect(page.getByText('The server is unavailable, so server logout could not be confirmed.')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBeNull();
+  expect(logoutRequests).toEqual([]);
+  await page.unroute('**/api/auth/status');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  await page.locator('#access-password').fill(process.env.PWA_TEST_PASSWORD!);
+  await page.getByRole('button', { name: 'Unlock workspace' }).click();
+  await expect(page.locator('#prompt-refinery-app')).toBeVisible();
+  await page.route('**/api/auth/logout', route => route.abort());
+  await page.getByRole('button', { name: 'Lock workspace' }).click();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
+  await expect(page.getByText(/Server logout could not be confirmed/)).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('prompt_refinery_offline_access_v1'))).toBeNull();
+  await expect.poll(() => logoutRequests.length).toBe(1);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Workspace locked' })).toBeVisible();
 });

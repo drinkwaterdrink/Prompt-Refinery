@@ -46,7 +46,7 @@ const GoalBuilderDrawer = React.lazy(() => import('./components/GoalBuilderDrawe
 const BlueprintExplorer = React.lazy(() => import('./components/BlueprintExplorer').then(module => ({ default: module.BlueprintExplorer })));
 
 export default function App() {
-  const { localOnly, connection } = useWorkspaceAccess();
+  const { localOnly, connection, lockWorkspace } = useWorkspaceAccess();
   // Toast Alert hook
   const { toastMessage, showToast } = useToast();
 
@@ -1033,14 +1033,16 @@ export default function App() {
           </button>
 
           {/* Settings Button */}
-          <button type="button" disabled={localOnly} onClick={async () => {
-            try {
-              const response = await apiFetch('/api/auth/logout', { method: 'POST', timeoutMs: 8000 });
-              if (!response.ok) throw new Error('Logout failed');
-              window.dispatchEvent(new Event('prompt-refinery-auth-required'));
-            } catch { showToast('Could not log out. Please try again when online.'); }
+          <button type="button" onClick={() => {
+            setBrowserApiKey('');
+            setCustomApiKey('');
+            setCustomHeadersJson('{}');
+            setConnectionProfiles(profiles => profiles.map(profile => ({ ...profile, apiKey: '', customHeadersJson: '{}' })));
+            sessionStorage.removeItem('prompt_refinery_byok');
+            sessionStorage.removeItem('prompt_refinery_custom_headers');
+            lockWorkspace();
           }}
-            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-40" title={localOnly ? 'Reconnect to log out of the server session' : 'Lock workspace'} aria-label="Lock workspace">
+            className="text-xs bg-[#161616] hover:bg-[#222222] border border-[#262626] text-slate-400 px-3 py-1.5 rounded-lg flex items-center gap-1.5" title="Lock workspace" aria-label="Lock workspace">
             <LogOut className="h-3.5 w-3.5" /><span className="hidden md:inline">Lock</span>
           </button>
           <button
