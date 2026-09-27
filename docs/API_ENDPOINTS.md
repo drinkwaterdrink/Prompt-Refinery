@@ -2,7 +2,7 @@
 
 This document provides a comprehensive specifications guide for Prompt Refinery's Node-Express server endpoints.
 
-In production, all existing `/api/*` workflow endpoints require the signed session cookie. `POST /api/auth/login` accepts `{ "password": "..." }`, `POST /api/auth/logout` revokes the session, and `GET /api/auth/status` returns `{ "authenticated": boolean }`. These three auth routes are reachable before login. Login is limited to five attempts per 15 minutes per IP.
+In production, all existing `/api/*` workflow endpoints require the signed session cookie. `POST /api/auth/login` accepts `{ "password": "..." }`, `POST /api/auth/logout` clears the browser session cookie, and `GET /api/auth/status` returns `{ "authenticated": boolean }`. These three auth routes are reachable before login. Login is limited to five attempts per 15 minutes per IP. A copied stateless token remains valid until expiry unless `COOKIE_SECRET` is rotated.
 
 ---
 

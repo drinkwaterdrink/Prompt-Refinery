@@ -666,8 +666,9 @@ async function startServer() {
     const originalJson = res.json.bind(res);
     res.json = ((body: any) => {
       if (body && (body.ok === false || res.statusCode >= 400)) {
+        const expectedProviderFailure = res.statusCode === 502 && body.error === 'The provider connection test failed.';
         const safe = { ...body, rawOutput: undefined,
-          error: res.statusCode >= 500 || res.statusCode === 200
+          error: res.statusCode >= 500 && !expectedProviderFailure
             ? 'The request could not be completed. Check server settings and logs for details.'
             : recursiveSanitize(body.error),
           type: body.type || (res.statusCode >= 500 ? 'PROVIDER_FAILURE' : undefined) };
@@ -782,14 +783,18 @@ async function startServer() {
       }
     } catch (err: any) {
       safeLog("Test connection failed:", err);
-      let errMsg = err.message || String(err);
-      if (config.apiKey && errMsg.includes(config.apiKey)) {
-        errMsg = errMsg.split(config.apiKey).join("[REDACTED]");
+      const message = err instanceof Error ? err.message : '';
+      const safeValidation = [
+        'Invalid custom provider URL.', 'Custom provider requires HTTPS.',
+        'Custom provider host is not permitted.', 'Custom provider resolves to a forbidden network.',
+        'Custom header is not permitted.', 'Invalid custom headers JSON.',
+        'Custom OpenAI configuration is missing.', 'Custom OpenAI API URL or Base URL is required.'
+      ];
+      if (safeValidation.includes(message)) return res.status(400).json({ ok: false, error: message });
+      if (message.startsWith('Gemini API key is not configured.')) {
+        return res.status(400).json({ ok: false, error: 'Gemini API key is not configured. Add it in Settings or on the server.' });
       }
-      if (config.browserApiKey && errMsg.includes(config.browserApiKey)) {
-        errMsg = errMsg.split(config.browserApiKey).join("[REDACTED]");
-      }
-      return res.json({ ok: false, error: recursiveSanitize(errMsg) });
+      return res.status(502).json({ ok: false, error: 'The provider connection test failed.', type: 'PROVIDER_FAILURE' });
     }
   });
 
@@ -865,7 +870,7 @@ You must reason privately. Output valid JSON only, matching the requested schema
         const fallbackIdeas = generateLocalSparks(sparkCount, sparkNovelty);
         return res.json({
           ok: false,
-          error: recursiveSanitize(customError.message),
+          error: production ? 'Custom provider could not generate sparks. Local ideas are shown.' : recursiveSanitize(customError.message),
           ideas: fallbackIdeas,
           fallback: true
         });
